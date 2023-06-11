@@ -1,0 +1,23 @@
+[[bin]]
+name = "adjustment"
+path = "src/main.rs"
+edition = "2021"
+
+[package]
+name = "adjustment"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = [
+    "shared",
+    "macros",
+    "traits",
+]
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dependencies]
+shared = { path = "shared" }
