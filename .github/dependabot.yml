@@ -22,7 +22,7 @@ updates:
       interval: "weekly"
       day: "sunday"
       time: "12:00"
-      timezone: "Mountain"
+      timezone: "MT"
     labels:
       - "github actions dependencies"
     ignore:
