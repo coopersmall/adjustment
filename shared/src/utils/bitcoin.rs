@@ -21,9 +21,14 @@ impl<'a> Bitcoin<'a> {
     pub fn price(&self) -> &Currency {
         &self.price
     }
+}
 
-    pub fn to_string(&self) -> String {
-        format!("{}: {}", self.name, self.price.marshal())
+impl<'a> Default for Bitcoin<'a> {
+    fn default() -> Self {
+        Self {
+            name: "",
+            price: Currency::default(),
+        }
     }
 }
 

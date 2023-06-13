@@ -32,15 +32,6 @@ impl Currency {
     pub fn symbol(&self) -> &CurrencySymbol {
         &self.symbol
     }
-
-    pub fn to_string(&self) -> String {
-        format!(
-            "{}: {} ({})",
-            self.code.marshal(),
-            self.name.marshal(),
-            self.symbol.marshal()
-        )
-    }
 }
 
 impl Default for Currency {

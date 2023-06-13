@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
 
-pub trait JSON<'a, T>: Serialize + Deserialize<'a> {
+pub trait Parse<'a, T>: Serialize + Deserialize<'a> {
     fn unmarshal(data: &'a str) -> Result<Self, Error>
     where
         Self: Sized,
@@ -14,4 +14,4 @@ pub trait JSON<'a, T>: Serialize + Deserialize<'a> {
     }
 }
 
-impl<'a, T> JSON<'a, T> for T where T: Serialize + Deserialize<'a> {}
+impl<'a, T> Parse<'a, T> for T where T: Serialize + Deserialize<'a> {}

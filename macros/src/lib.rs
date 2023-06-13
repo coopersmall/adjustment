@@ -41,20 +41,6 @@ pub fn deserializeable(_metadata: TokenStream, input: TokenStream) -> TokenStrea
 }
 
 #[proc_macro_attribute]
-pub fn json(_metadata: TokenStream, input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-
-    let output = quote! {
-          use serde::{Serialize, Deserialize};
-          #[derive(Serialize, Deserialize)]
-
-    #input
-
-      };
-    output.into()
-}
-
-#[proc_macro_attribute]
 pub fn json_parse(_metadata: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let generics = &input.generics;
@@ -68,7 +54,6 @@ pub fn json_parse(_metadata: TokenStream, input: TokenStream) -> TokenStream {
     let output = if lifetime.is_some() {
         quote! {
             use serde::{Serialize, Deserialize};
-            use traits::JSONParse;
 
             #[derive(Serialize, Deserialize)]
             #input
@@ -84,7 +69,6 @@ pub fn json_parse(_metadata: TokenStream, input: TokenStream) -> TokenStream {
 
         let input_with_lifetime = quote! {
             use serde::{Serialize, Deserialize};
-            use traits::JSONParse;
 
             #[derive(Serialize, Deserialize)]
             #input

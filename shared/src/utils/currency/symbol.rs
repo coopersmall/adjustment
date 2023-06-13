@@ -4,7 +4,7 @@ use super::code::CurrencyCode;
 use super::name::CurrencyName;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[json]
+#[json_parse]
 pub enum CurrencySymbol {
     USD,
     BTC,
@@ -29,9 +29,9 @@ impl CurrencySymbol {
     pub fn get_name(&self) -> CurrencyName {
         match self {
             CurrencySymbol::BTC => CurrencyName::Bitcoin,
-            CurrencySymbol::USD => CurrencyName::US_Dollar,
+            CurrencySymbol::USD => CurrencyName::Dollar,
             CurrencySymbol::EUR => CurrencyName::Euro,
-            CurrencySymbol::GBP => CurrencyName::British_Pound,
+            CurrencySymbol::GBP => CurrencyName::Pound,
         }
     }
 
@@ -116,9 +116,9 @@ pub fn get_symbol_from_code(code: &CurrencyCode) -> CurrencySymbol {
 
 pub fn get_symbol_from_name(name: &CurrencyName) -> CurrencySymbol {
     match name {
-        CurrencyName::US_Dollar => CurrencySymbol::USD,
+        CurrencyName::Dollar => CurrencySymbol::USD,
         CurrencyName::Bitcoin => CurrencySymbol::BTC,
         CurrencyName::Euro => CurrencySymbol::EUR,
-        CurrencyName::British_Pound => CurrencySymbol::GBP,
+        CurrencyName::Pound => CurrencySymbol::GBP,
     }
 }
