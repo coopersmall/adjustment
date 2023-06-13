@@ -1,7 +1,7 @@
-use shared::utils::bitcoin::Bitcoin;
-use shared::utils::currency::Currency;
-use traits::errors::{Error, ErrorCode, ErrorMessage, ErrorMeta};
-use traits::json::Parse;
+use domain::bitcoin::Bitcoin;
+use domain::currency::Currency;
+use utils::errors::{Error, ErrorCode, ErrorMessage, ErrorMeta};
+use utils::json::Parse;
 
 fn main() {
     let result = Currency::new()
