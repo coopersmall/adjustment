@@ -1,5 +1,5 @@
-use domain::bitcoin::Bitcoin;
-use domain::currency::Currency;
+use common::bitcoin::Bitcoin;
+use common::currency::Currency;
 use utils::errors::{Error, ErrorCode, ErrorMessage, ErrorMeta};
 use utils::json::Parse;
 
