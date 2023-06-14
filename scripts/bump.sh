@@ -1,23 +1,34 @@
 #!/bin/bash
 
+# Set color variables
+purple_light=$(tput setaf 147)
+purple_dark=$(tput setaf 99)
+blue=$(tput setaf 39)
+yellow=$(tput setaf 228)
+red=$(tput setaf 1)
+reset=$(tput sgr0)
+
 # Function to display the menu
 display_menu() {
-    echo "Select an option:"
-    echo "  [1] Workspace"
-    echo "  [2] Crate"
-    echo "  [3] Exit"
-    echo
+    echo "${purple_light}Select an option:${reset}"
+    echo "${blue}"
+    echo "  ${blue}[1]${reset} Workspace"
+    echo "  ${blue}[2]${reset} Crate"
+    echo "  ${blue}[3]${reset} Exit"
+    echo "${reset}"
 }
 
 # Function to prompt for the crate name
 prompt_for_crate() {
-    echo "Enter the target crate:"
-    echo "  [1] Utils"
-    echo "  [2] Macros"
-    echo "  [3] Common"
-    echo "  [4] Exit"
-    echo
+    echo "${purple_light}Enter the target crate:${reset}"
+    echo "${blue}"
+    echo "  ${blue}[1]${reset} Utils"
+    echo "  ${blue}[2]${reset} Macros"
+    echo "  ${blue}[3]${reset} Common"
+    echo "  ${blue}[4]${reset} Exit"
+    echo "${reset}"
 }
+
 
 # Function to validate the option
 validate_option() {
@@ -55,7 +66,7 @@ validate_crate_option() {
             ;;
         4 | "exit")
             echo
-            echo "Exiting..."
+            bash ./scripts/goodbye.sh  
             exit 0
             ;;
         *)
@@ -73,7 +84,7 @@ command_exists() {
 clear
 
 # Print ASCII art
-figlet "Release Version Manager"
+echo "${purple_dark}$(figlet "Release Version Manager")${reset}"
 
 echo
 
@@ -91,10 +102,10 @@ while true; do
 
     validate_option "$choice"
     
-    echo
-
     case $selected_option in
         "workspace")
+            bash ./scripts/positivity.sh
+            echo
             # Update release version for the entire workspace
 
             # Run the script to update the release version
@@ -104,6 +115,8 @@ while true; do
         "crate")
             # Prompt for the crate to update
             while true; do
+                bash ./scripts/positivity.sh
+                echo
                 prompt_for_crate
                 echo -n "Choice: "
 
@@ -117,10 +130,12 @@ while true; do
                 validate_crate_option "$crate"
 
                 if [[ -n $crate_name ]]; then
+                    bash ./scripts/positivity.sh
+                    echo
                     break
                 else
                     echo
-                    echo "Invalid crate option. Please try again."
+                    echo "${red}Invalid crate option. Please try again.${reset}"
                 fi
             done
 
@@ -135,12 +150,11 @@ while true; do
             break
             ;;
         "exit")
-            echo "Exiting..."
+            bash ./scripts/goodbye.sh  
             exit 0
             ;;
         *)
-            echo
-            echo "Invalid option. Please try again."
+            echo "${red}Invalid option. Please try again.${reset}"
             ;;
     esac
 done

@@ -19,6 +19,14 @@ make deps:
 	@make tooling > /dev/null
 	@make install-hooks > /dev/null
 
+make deps-dev:
+	@echo "Installing dev dependencies..."
+	@make tooling > /dev/null
+	@cargo build > /dev/null
+	@echo "Dev dependencies installed successfully!"
+	@make install-hooks > /dev/null
+	@make visual > /dev/null
+
 clean:
 	@echo "Removing target directory..."
 	@rm -r target
@@ -66,6 +74,14 @@ tooling:
 version:
 	@chmod +x scripts/bump.sh
 	@bash scripts/bump.sh
+
+visual:
+	@echo "Installing fun visual tools :)"
+	@chmod +x scripts/positivity.sh
+	@chmod +x scripts/goodbye.sh
+	@chmod +x scripts/visual.sh
+	@bash scripts/visual.sh
+	@echo "Visual tools installed successfully!"
 
 .PHONY: clean format start test install-hooks all tooling deps lint
 
