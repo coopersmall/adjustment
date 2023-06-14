@@ -1,17 +1,26 @@
 build:
-	cargo build
+	@echo "Removing target directory..."
+	@make clean > /dev/null
+	@echo "Building project..."
+	@cargo build > /dev/null
+	@echo "Project built successfully!"
+
+make deps:
+	@echo "Installing dependencies..."
+	@cargo build > /dev/null
+	@echo "Dependencies installed successfully!"
+	@make tooling > /dev/null
+	@make install-hooks > /dev/null
 
 clean:
-	rm -r target
+	@echo "Removing target directory..."
+	@rm -r target
+	@echo "Target directory removed successfully!"
 
 format:
-	cargo fmt
-
-start:
-	cargo run
-
-test:
-	cargo test
+	@echo "Formatting code..."
+	@cargo fmt
+	@echo "Code formatted successfully!"
 
 install-hooks:
 	@echo "Installing pre-commit hook..."
@@ -27,8 +36,21 @@ install-hooks:
 	@chmod +x .git/hooks/pre-push
 	@echo "Pre-push hook installed successfully!"
 
+start:
+	@echo "Starting project..."
+	@cargo run
 
-.PHONY: clean format start test install-hooks all
+test:
+	@echo "Running tests..."
+	@cargo test
+	@echo "Tests ran successfully!"
 
-all: install-hooks clean build
+tooling:
+	@echo "Installing tooling..."
+	chmod +x scripts/install-tooling.sh
+	./scripts/install-tooling.sh
+	@echo "Tooling installation complete."
 
+.PHONY: clean format start test install-hooks all tooling deps
+
+all: deps 
