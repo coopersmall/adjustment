@@ -102,7 +102,6 @@ while true; do
         "crate")
             # Prompt for the crate to update
             while true; do
-                echo
                 prompt_for_crate
                 echo -n "Choice: "
 
