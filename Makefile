@@ -7,7 +7,7 @@ build:
 
 bump:
 	@echo "Bumping release version..."
-	@chmod +x scripts/update-release.sh
+	@chmod +x scripts/update-release-version.sh
 	@bash scripts/bump.sh
 	@echo "Release version bumped successfully!"
 
