@@ -3,9 +3,10 @@
 # Set color variables
 purple_light=$(tput setaf 147)
 purple_dark=$(tput setaf 99)
+light_green=$(tput setaf 76)
 blue=$(tput setaf 39)
 yellow=$(tput setaf 228)
-red=$(tput setaf 1)
+bright_red=$(tput setaf 196)
 reset=$(tput sgr0)
 
 # Function to display the menu
@@ -104,7 +105,7 @@ while true; do
     
     case $selected_option in
         "workspace")
-            bash ./scripts/positivity.sh
+            bash ./scripts/positivity.sh | sed "s/.*/${light_green}&${reset}/"
             echo
             # Update release version for the entire workspace
 
@@ -114,9 +115,8 @@ while true; do
             ;;
         "crate")
             # Prompt for the crate to update
+            bash ./scripts/positivity.sh | sed "s/.*/${light_green}&${reset}/"
             while true; do
-                bash ./scripts/positivity.sh
-                echo
                 prompt_for_crate
                 echo -n "Choice: "
 
@@ -130,12 +130,11 @@ while true; do
                 validate_crate_option "$crate"
 
                 if [[ -n $crate_name ]]; then
-                    bash ./scripts/positivity.sh
+                    bash ./scripts/positivity.sh | sed "s/.*/${light_green}&${reset}/"
                     echo
                     break
                 else
-                    echo
-                    echo "${red}Invalid crate option. Please try again.${reset}"
+                    echo "${bright_red}Invalid crate option. Please try again.${reset}"
                 fi
             done
 
@@ -154,7 +153,7 @@ while true; do
             exit 0
             ;;
         *)
-            echo "${red}Invalid option. Please try again.${reset}"
+            echo "${bright_red}Invalid option. Please try again.${reset}"
             ;;
     esac
 done
