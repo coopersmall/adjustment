@@ -63,6 +63,10 @@ tooling:
 	@bash scripts/tooling.sh
 	@echo "Tooling installed successfully!"
 
+version:
+	@chmod +x scripts/bump.sh
+	@bash scripts/bump.sh
+
 .PHONY: clean format start test install-hooks all tooling deps lint
 
 all: deps 

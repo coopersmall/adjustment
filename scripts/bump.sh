@@ -90,6 +90,8 @@ while true; do
     choice="${choice%"${choice##*[![:space:]]}"}"
 
     validate_option "$choice"
+    
+    echo
 
     case $selected_option in
         "workspace")
@@ -133,7 +135,6 @@ while true; do
             break
             ;;
         "exit")
-            echo
             echo "Exiting..."
             exit 0
             ;;
