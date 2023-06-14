@@ -5,6 +5,13 @@ build:
 	@cargo build > /dev/null
 	@echo "Project built successfully!"
 
+bump:
+	@echo "Bumping release version..."
+	@chmod +x scripts/update-release.sh
+	@bash scripts/bump.sh
+	@echo "Release version bumped successfully!"
+
+
 make deps:
 	@echo "Installing dependencies..."
 	@cargo build > /dev/null
@@ -36,6 +43,11 @@ install-hooks:
 	@chmod +x .git/hooks/pre-push
 	@echo "Pre-push hook installed successfully!"
 
+lint:
+	@echo "Linting code..."
+	@cargo clippy -- -D warnings
+	@echo "Code linted successfully!"
+
 start:
 	@echo "Starting project..."
 	@cargo run
@@ -47,10 +59,10 @@ test:
 
 tooling:
 	@echo "Installing tooling..."
-	chmod +x scripts/install-tooling.sh
-	./scripts/install-tooling.sh
-	@echo "Tooling installation complete."
+	@chmod +x scripts/tooling.sh
+	@bash scripts/tooling.sh
+	@echo "Tooling installed successfully!"
 
-.PHONY: clean format start test install-hooks all tooling deps
+.PHONY: clean format start test install-hooks all tooling deps lint
 
 all: deps 
