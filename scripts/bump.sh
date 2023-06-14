@@ -87,8 +87,6 @@ clear
 # Print ASCII art
 echo "${purple_dark}$(figlet "Release Version Manager")${reset}"
 
-echo
-
 # Prompt for selection: workspace, crate, or exit
 while true; do
     display_menu

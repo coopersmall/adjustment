@@ -1,79 +1,103 @@
+TARGET := target/
+
+# Commands
+BUILD_COMMAND = cargo build > /dev/null
+TEST_COMMAND = cargo test > /dev/null
+LINT_COMMAND = cargo clippy -- -D warnings > /dev/null
+START_COMMAND = cargo run
+FORMAT_COMMAND = cargo fmt > /dev/null
+CLEAN_COMMAND = rm -r $(TARGET) > /dev/null
+
+# Scripts 
+PRE_COMMIT = scripts/pre-commit.sh
+PRE_PUSH = scripts/pre-push.sh
+RELEASE_MANAGER = scripts/bump.sh
+TOOLING = scripts/tooling.sh
+
+# Function definition
+define clean_and_build
+	if [ -e "$(TARGET)" ]; then \
+		make clean > /dev/null; \
+	fi; \
+	$(BUILD_COMMAND);
+endef
+
+# Export function
+export clean_and_build
+
+# Build target
 build:
-	@echo "Removing target directory..."
-	@make clean > /dev/null
 	@echo "Building project..."
-	@cargo build > /dev/null
+	@$(call clean_and_build)
 	@echo "Project built successfully!"
 
 bump:
 	@echo "Bumping release version..."
-	@chmod +x scripts/update-release-version.sh
-	@bash scripts/bump.sh
+	@chmod +x $(RELEASE_MANAGER)
+	@bash $(RELEASE_MANAGER)
 	@echo "Release version bumped successfully!"
 
-
-make deps:
+deps:
 	@echo "Installing dependencies..."
-	@cargo build > /dev/null
+	@$(BUILD_COMMAND)
 	@echo "Dependencies installed successfully!"
 	@make tooling > /dev/null
 	@make install-hooks > /dev/null
 
-make deps-dev:
+deps-dev:
 	@echo "Installing dev dependencies..."
 	@make tooling > /dev/null
-	@cargo build > /dev/null
+	@$(BUILD_COMMAND) --dev
 	@echo "Dev dependencies installed successfully!"
 	@make install-hooks > /dev/null
 	@make visual > /dev/null
 
 clean:
 	@echo "Removing target directory..."
-	@rm -r target
+	@$(CLEAN_COMMAND)
 	@echo "Target directory removed successfully!"
 
 format:
 	@echo "Formatting code..."
-	@cargo fmt
+	@$(FORMAT_COMMAND)
 	@echo "Code formatted successfully!"
 
 install-hooks:
 	@echo "Installing pre-commit hook..."
 	@echo "#!/bin/bash" > .git/hooks/pre-commit
-	@cat scripts/pre-commit.sh >> .git/hooks/pre-commit
+	@cat $(PRE_COMMIT) >> .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "Pre-commit hook installed successfully!"
 
-
 	@echo "Installing pre-push hook..."
 	@echo "#!/bin/bash" > .git/hooks/pre-push
-	@cat scripts/pre-push.sh >> .git/hooks/pre-push
+	@cat $(PRE_COMMIT) >> .git/hooks/pre-push
 	@chmod +x .git/hooks/pre-push
 	@echo "Pre-push hook installed successfully!"
 
 lint:
 	@echo "Linting code..."
-	@cargo clippy -- -D warnings
+	@$(LINT_COMMAND)
 	@echo "Code linted successfully!"
 
 start:
 	@echo "Starting project..."
-	@cargo run
+	@$(START_COMMAND)
 
 test:
 	@echo "Running tests..."
-	@cargo test
+	@$(TEST_COMMAND)
 	@echo "Tests ran successfully!"
 
 tooling:
 	@echo "Installing tooling..."
-	@chmod +x scripts/tooling.sh
-	@bash scripts/tooling.sh
+	@chmod +x $(TOOLING)
+	@bash $(TOOLING)
 	@echo "Tooling installed successfully!"
 
 version:
-	@chmod +x scripts/bump.sh
-	@bash scripts/bump.sh
+	@chmod +x $(RELEASE_MANAGER)
+	@bash $(RELEASE_MANAGER)
 
 visual:
 	@echo "Installing fun visual tools :)"
@@ -83,6 +107,7 @@ visual:
 	@bash scripts/visual.sh
 	@echo "Visual tools installed successfully!"
 
-.PHONY: clean format start test install-hooks all tooling deps lint
+.PHONY: clean format start test install-hooks all tooling deps lint bump visual
 
-all: deps 
+all: deps
+
