@@ -30,7 +30,6 @@ prompt_for_crate() {
     echo "${reset}"
 }
 
-
 # Function to validate the option
 validate_option() {
     local option=$1
@@ -66,8 +65,6 @@ validate_crate_option() {
             crate_name="common"
             ;;
         4 | "exit")
-            echo
-            bash ./scripts/goodbye.sh  
             exit 0
             ;;
         *)
@@ -76,9 +73,109 @@ validate_crate_option() {
     esac
 }
 
-# Function to check if a command is available
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
+exit_display() {
+    local exit_code=$1
+    local message=$2
+
+    clear
+
+    if [[ $exit_code -eq 0 ]]; then
+        echo "${light_green}${message}${reset}"
+    else
+        echo "${bright_red}${message}${reset}"
+    fi
+}
+
+# Function to bump the version in Cargo.toml
+bump_version() {
+    local crate=$1
+    local major=$2
+    local minor=$3
+    local file
+
+    case $crate in
+        "workspace")
+            file="./Cargo.toml"
+            ;;
+        "utils")
+            file="./utils/Cargo.toml"
+            ;;
+        "macros")
+            file="./macros/Cargo.toml"
+            ;;
+        "common")
+            file="./common/Cargo.toml"
+            ;;
+        *)
+            clear
+            echo "$(bash ./scripts/funny-exit.sh)"
+            echo "${bright_red}Invalid crate name: $crate${reset}"
+            exit 1
+            ;;
+    esac
+
+    if [ -f "$file" ]; then
+        # Extract the existing version
+        local current_version=$(grep -oE 'version\s*=\s*"[^"]+"' "$file" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+
+        # Split the version into major, minor, and patch parts
+        local current_major=$(echo "$current_version" | cut -d. -f1)
+        local current_minor=$(echo "$current_version" | cut -d. -f2)
+        local current_patch=$(echo "$current_version" | cut -d. -f3)
+
+        # Prompt for version update type (major or minor)
+        echo "${purple_light}Select version update type:${reset}"
+        echo "${blue}"
+        echo "  ${blue}[1]${reset} Major"
+        echo "  ${blue}[2]${reset} Minor"
+        echo "${reset}"
+        echo -n "Version type?: "
+        read -r version_type
+
+        # Increment the version based on the selected type
+        case $version_type in
+            1)
+                # Major version update
+                echo "${bright_red}Are you sure you want to update to a new major version? (y/n):${reset}"
+                read -r confirmation
+                if [[ $confirmation == "y" || $confirmation == "Y" ]]; then
+                    major=$((current_major + 1))
+                    minor=0
+                else
+                    clear
+                    echo "$(bash ./scripts/funny-exit.sh)"
+                    echo "${bright_red}Error: $file not found.${reset}"
+                    exit 1
+                fi
+                ;;
+            2)
+                # Minor versuion update
+                major=$current_major
+                minor=$((current_minor + 1))
+                ;;
+            *)
+
+                clear
+                echo "$(bash ./scripts/funny-exit.sh)"
+                echo "${bright_red}Invalid version update type. Version update canceled.${reset}"
+                exit 1
+                ;;
+        esac
+        
+        # Update the version line in the file
+        sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$major.$minor.0\"/" "$file" 
+
+        clear
+
+        echo "${light_green}$(bash ./scripts/goodbye.sh)${reset}"
+        echo "Version bumped to $major.$minor.0 for $crate"
+        exit 0
+    else
+        clear
+        echo "$(bash ./scripts/funny-exit.sh)"
+        echo "${bright_red}Error: $file not found.${reset}"
+        exit 1
+    fi
 }
 
 # Clear the screen
@@ -90,64 +187,51 @@ echo "${purple_dark}$(figlet "Release Version Manager")${reset}"
 # Prompt for selection: workspace, crate, or exit
 while true; do
     display_menu
-    echo -n "Choice: "
+    echo -n "Which one?: "
 
     # Read user input and convert to lowercase
     read -r choice
-    choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
-
-    # Remove trailing whitespace
-    choice="${choice%"${choice##*[![:space:]]}"}"
+    choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
 
     validate_option "$choice"
-    
+
     case $selected_option in
         "workspace")
-            bash ./scripts/positivity.sh | sed "s/.*/${light_green}&${reset}/"
+            echo "${light_green}$(bash ./scripts/positivity.sh)${reset}"
             echo
-            # Update release version for the entire workspace
-
-            # Run the script to update the release version
-            ./scripts/update-release-version.sh
+            echo "Updating release version for the entire workspace"
+            # Bump version for the workspace
+            bump_version "workspace" 0 1
             break
             ;;
         "crate")
             # Prompt for the crate to update
-            bash ./scripts/positivity.sh | sed "s/.*/${light_green}&${reset}/"
             while true; do
+                echo "${light_green}$(bash ./scripts/positivity.sh)${reset}"
                 prompt_for_crate
-                echo -n "Choice: "
+                echo -n "Which Crate?: "
 
                 # Read user input and convert to lowercase
                 read -r crate
-                crate=$(echo "$crate" | tr '[:upper:]' '[:lower:]')
-
-                # Remove trailing whitespace
-                crate="${crate%"${crate##*[![:space:]]}"}"
+                crate=$(echo "$crate" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
 
                 validate_crate_option "$crate"
 
                 if [[ -n $crate_name ]]; then
-                    bash ./scripts/positivity.sh | sed "s/.*/${light_green}&${reset}/"
-                    echo
+                    echo "${light_green}$(bash ./scripts/positivity.sh)${reset}"
+                    echo "Updating release version for $crate_name crate"
+                    # Bump version for the selected crate
+                    bump_version "$crate_name" 0 1
                     break
                 else
                     echo "${bright_red}Invalid crate option. Please try again.${reset}"
                 fi
             done
-
-            # Navigate to the crate directory
-            cd "$crate_name" || exit 1
-
-            # Run the script to update the release version
-            ../../scripts/update-release-version.sh
-
-            # Navigate back to the workspace root directory
-            cd ..
             break
             ;;
         "exit")
-            bash ./scripts/goodbye.sh  
+            clear
+            echo "${light_green}$(bash ./scripts/goodbye.sh)${reset}"
             exit 0
             ;;
         *)

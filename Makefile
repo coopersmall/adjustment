@@ -103,6 +103,7 @@ visual:
 	@echo "Installing fun visual tools :)"
 	@chmod +x scripts/positivity.sh
 	@chmod +x scripts/goodbye.sh
+	@chmod +x scripts/funny-exit.sh
 	@chmod +x scripts/visual.sh
 	@bash scripts/visual.sh
 	@echo "Visual tools installed successfully!"
