@@ -43,10 +43,3 @@ if ! command_exists figlet; then
 else
     echo "figlet is already installed."
 fi
-
-# Install lolcat
-if ! command_exists lolcat; then
-    install_package "lolcat"
-else
-    echo "lolcat is already installed."
-fi

@@ -108,7 +108,7 @@ bump_version() {
             ;;
         *)
             clear
-            echo "$(bash ./scripts/funny-exit.sh)"
+            echo "$(bash ./scripts/text/exit.sh)"
             echo "${bright_red}Invalid crate name: $crate${reset}"
             exit 1
             ;;
@@ -143,7 +143,7 @@ bump_version() {
                     minor=0
                 else
                     clear
-                    echo "$(bash ./scripts/funny-exit.sh)"
+                    echo "$(bash ./scripts/text/exit.sh)"
                     echo "${bright_red}Error: $file not found.${reset}"
                     exit 1
                 fi
@@ -156,7 +156,7 @@ bump_version() {
             *)
 
                 clear
-                echo "$(bash ./scripts/funny-exit.sh)"
+                echo "$(bash ./scripts/text/exit.sh)"
                 echo "${bright_red}Invalid version update type. Version update canceled.${reset}"
                 exit 1
                 ;;
@@ -167,12 +167,12 @@ bump_version() {
 
         clear
 
-        echo "${light_green}$(bash ./scripts/goodbye.sh)${reset}"
+        echo "${light_green}$(bash ./scripts/text/goodbye.sh)${reset}"
         echo "Version bumped to $major.$minor.0 for $crate"
         exit 0
     else
         clear
-        echo "$(bash ./scripts/funny-exit.sh)"
+        echo "$(bash ./scripts/text/exit.sh)"
         echo "${bright_red}Error: $file not found.${reset}"
         exit 1
     fi
@@ -197,7 +197,7 @@ while true; do
 
     case $selected_option in
         "workspace")
-            echo "${light_green}$(bash ./scripts/positivity.sh)${reset}"
+            echo "${light_green}$(bash ./scripts/text/positivity.sh)${reset}"
             echo
             echo "Updating release version for the entire workspace"
             # Bump version for the workspace
@@ -207,7 +207,7 @@ while true; do
         "crate")
             # Prompt for the crate to update
             while true; do
-                echo "${light_green}$(bash ./scripts/positivity.sh)${reset}"
+                echo "${light_green}$(bash ./scripts/text/positivity.sh)${reset}"
                 prompt_for_crate
                 echo -n "Which Crate?: "
 
@@ -218,7 +218,7 @@ while true; do
                 validate_crate_option "$crate"
 
                 if [[ -n $crate_name ]]; then
-                    echo "${light_green}$(bash ./scripts/positivity.sh)${reset}"
+                    echo "${light_green}$(bash ./scripts/text/positivity.sh)${reset}"
                     echo "Updating release version for $crate_name crate"
                     # Bump version for the selected crate
                     bump_version "$crate_name" 0 1
@@ -231,7 +231,7 @@ while true; do
             ;;
         "exit")
             clear
-            echo "${light_green}$(bash ./scripts/goodbye.sh)${reset}"
+            echo "${light_green}$(bash ./scripts/text/goodbye.sh)${reset}"
             exit 0
             ;;
         *)
