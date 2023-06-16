@@ -183,4 +183,3 @@ else
     git add . && git commit -m "Bump crate versions"
     exec git push origin "$branch"
 fi
-
