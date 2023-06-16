@@ -108,11 +108,13 @@ else
         crate_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version ="){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; exit}}' "${crate}/Cargo.toml")
         echo "Current version: ${crate_version}"
 
+        echo "Checking for changes in ${crate}..."
         # Check if there are changes in the crate directory since the last commit
         if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
 
             echo "Changes detected. Checking if version bump is required..."
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}')
+            echo "Master version: ${master_version}"
 
             # Compare the crate version with the master version and update if necessary
             if version_compare "$crate_version" "$master_version" && [[ $? -le 1 ]]; then
