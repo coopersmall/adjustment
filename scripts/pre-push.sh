@@ -53,15 +53,15 @@ version_compare() {
         fi
     done
 
-    # Check the patch version
-    if ((10#${v1[2]} <= 10#${v2[2]})); then
-        # v1 patch is less than or equal to v2 patch
-        echo "The version is lower than or equal to the master version."
+    # Compare the patch versions
+    if ((10#${v1[2]:-0} <= 10#${v2[2]:-0})); then
+        echo "The patch version is less than or equal to the master version."
         return 1
     fi
 
     return 0
 }
+
 
 # Check if it's the first push to origin
 first_push=false
