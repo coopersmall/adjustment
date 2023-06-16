@@ -87,7 +87,7 @@ if [ "$first_push" = true ]; then
         new_version="${major}.${minor}.${new_patch}"
         sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
         echo "Bumped workspace version to ${new_version}"
-        git add ../Cargo.toml
+        git add Cargo.toml
     fi
 
     # Commit the changes if there are modifications
@@ -102,16 +102,15 @@ else
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
         if git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/" | grep -q '.'; then
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
-            if version_compare "$crate_version" "$master_version" && [[ $? == 2 ]]; then
-                echo "here"
+            if version_compare "$crate_version" "$master_version" && [[ $? -le 2 ]]; then
                 major="${crate_version%%.*}"
                 minor="${crate_version#*.}"
                 patch="${minor#*.}"
-                new_patch=$((patch + 1))
+                new_patch=$(awk -F'.' '{print $3}' <<< "$master_version")
                 new_version="${major}.${minor}.${new_patch}"
                 sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
                 echo "Bumped ${crate} version to ${new_version}"
-                git add "../${crate}/Cargo.toml"
+                git add "${crate}/Cargo.toml"
             fi
         fi
     done
@@ -120,15 +119,15 @@ else
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
     if git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- . | grep -q '.'; then
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
-        if version_compare "$workspace_version" "$master_workspace_version" && [[ $? == 2 ]]; then
+        if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 2 ]]; then
             major="${workspace_version%%.*}"
             minor="${workspace_version#*.}"
             patch="${minor#*.}"
-            new_patch=$((patch + 1))
+            new_patch=$(awk -F'.' '{print $3}' <<< "$master_workspace_version")
             new_version="${major}.${minor}.${new_patch}"
             sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
             echo "Bumped workspace version to ${new_version}"
-            git add ../Cargo.toml
+            git add Cargo.toml
         fi
     fi
 
