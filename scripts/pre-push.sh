@@ -64,7 +64,7 @@ if [ "$first_push" = true ]; then
 
     # Increase the patch version for each crate with changes
     for crate in "utils" "common" "macros"; do
-        if git log --oneline "origin/master..HEAD" -- . | awk '/Bump/{exit 1}'; then
+        if git log --oneline --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)..HEAD" -- "${crate}/" | grep -q '.'; then
             crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
             major="${crate_version%%.*}"
             minor="${crate_version#*.}"
@@ -78,7 +78,7 @@ if [ "$first_push" = true ]; then
     done
 
     # Increase the patch version for the workspace if it has changes
-    if git log --oneline "origin/master..HEAD" -- . | awk '/Bump/{exit 1}'; then
+    if git log --oneline --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)..HEAD" -- . | grep -q '.'; then
         workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
         major="${workspace_version%%.*}"
         minor="${workspace_version#*.}"
@@ -97,12 +97,10 @@ if [ "$first_push" = true ]; then
         git commit -m "Bump versions"
     fi
 else
-    echo "$(git diff --name-only --diff-filter=ACMRTUXB "origin/master" -- "${crate}/")"
-
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
-        if git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"; then
+        if git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/" | grep -q '.'; then
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
             if version_compare "$crate_version" "$master_version" && [[ $? == 2 ]]; then
                 major="${crate_version%%.*}"
@@ -119,7 +117,7 @@ else
 
     # Compare workspace version with master and update if necessary
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
-    if git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"; then
+    if git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- . | grep -q '.'; then
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? == 2 ]]; then
             major="${workspace_version%%.*}"
