@@ -54,14 +54,18 @@ version_compare() {
     done
 
     # Compare the patch versions
-    if ((10#${v1[2]:-0} <= 10#${v2[2]:-0})); then
-        echo "The patch version is less than or equal to the master version."
+    if ((10#${v1[2]:-0} < 10#${v2[2]:-0})); then
+        echo "The patch version is less than the master version."
         return 1
+    elif ((10#${v1[2]:-0} == 10#${v2[2]:-0})); then
+        echo "The patch version is equal to the master version."
+    else
+        echo "The patch version is greater than the master version."
+        return 2
     fi
 
     return 0
 }
-
 
 # Check if it's the first push to origin
 first_push=false
