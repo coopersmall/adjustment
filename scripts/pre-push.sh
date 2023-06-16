@@ -138,12 +138,14 @@ else
 
                     git add "${crate}/Cargo.toml"
                     echo "Bumped ${crate} version to ${new_version}"
+                    echo
                 else
                     echo "Invalid version number detected. Double check the Cargo.toml file for ${crate}."
                     exit 1
                 fi
             else
                 echo "No version bump required."
+                echo
             fi
         fi
     done
