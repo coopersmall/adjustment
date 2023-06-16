@@ -73,6 +73,8 @@ if [ "$first_push" = true ]; then
             new_version="${major}.${minor}.${new_patch}"
             sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
             echo "Bumped ${crate} version to ${new_version}"
+            git add "${crate}/Cargo.toml"
+            git commit -m "Bump ${crate} version to ${new_version}"
         fi
     done
 
@@ -86,6 +88,8 @@ if [ "$first_push" = true ]; then
         new_version="${major}.${minor}.${new_patch}"
         sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
         echo "Bumped workspace version to ${new_version}"
+        git add Cargo.toml
+        git commit -m "Bump workspace version to ${new_version}"
     fi
 else
     # Compare crate versions with master and update if necessary
@@ -100,6 +104,8 @@ else
             new_version="${major}.${minor}.${new_patch}"
             sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
             echo "Bumped ${crate} version to ${new_version}"
+            git add "${crate}/Cargo.toml"
+            git commit -m "Bump ${crate} version to ${new_version}"
         fi
     done
 
@@ -114,6 +120,8 @@ else
         new_version="${major}.${minor}.${new_patch}"
         sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
         echo "Bumped workspace version to ${new_version}"
+        git add Cargo.toml
+        git commit -m "Bump workspace version to ${new_version}"
     fi
 fi
 
@@ -128,7 +136,3 @@ cargo fmt --all -- --check
 
 # Run cargo clippy
 # cargo clippy
-
-# Add and commit the version changes
-git add -A
-git commit -m "Bump versions"
