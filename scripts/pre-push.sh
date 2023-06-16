@@ -33,18 +33,21 @@ fi
 
 # Function to compare two versions
 version_compare() {
-    local v1=$1
-    local v2=$2
-    local IFS=.
-    v1=($v1)
-    v2=($v2)
-    for ((i=0; i<3; i++)); do
+    if [[ $1 == $2 ]]; then
+        return 0
+    fi
+
+    IFS='.' read -ra v1 <<< "$1"
+    IFS='.' read -ra v2 <<< "$2"
+
+    for ((i=0; i<${#v1[@]}; i++)); do
         if ((10#${v1[i]} > 10#${v2[i]})); then
             return 1
         elif ((10#${v1[i]} < 10#${v2[i]})); then
             return 2
         fi
     done
+
     return 0
 }
 
