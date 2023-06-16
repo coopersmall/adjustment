@@ -141,15 +141,18 @@ else
 
                     git add "${crate}/Cargo.toml"
                     echo "Bumped ${crate} version to ${new_version}"
+                    echo
                 else
                     echo "Invalid version number detected. Double check the Cargo.toml file for ${crate}."
                     exit 1
                 fi
             else
                 echo "No version bump required."
+                echo
             fi
         else
             echo "No changes detected."
+            echo
         fi
     done
 
@@ -193,15 +196,18 @@ else
 
                 git add Cargo.toml
                 echo "Bumped workspace version to ${new_version}"
+                echo
             else
                 echo "The version must only contain numbers. Double check the Cargo.toml file for the workspace."
                 exit 1
             fi
         else
             echo "No version bump required."
+            echo
         fi
     else
         echo "No changes detected."
+        echo
     fi
 
     # Commit the changes if there are modifications
