@@ -99,13 +99,16 @@ if [ "$first_push" = true ]; then
 else
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
+
         echo "Checking ${crate}..."
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
         echo "Current version: ${crate_version}"
+
         if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
+
             echo "Changes detected. Checking if version bump is required..."
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
-            echo "master version: ${master_version}"
+
             if version_compare "$crate_version" "$master_version" && [[ $? -le 2 ]]; then
                 # Extract major, minor, and patch versions using regex and validate them
                 if [[ $crate_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
@@ -122,7 +125,10 @@ else
                     new_patch=$((patch + 1))
                     new_version="${major}.${minor}.${new_patch}"
 
+                    # Update the version in Cargo.toml
                     sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml"
+
+                    # Remove the backup file created by sed
                     rm "${crate}/Cargo.toml-e"
 
                     git add "${crate}/Cargo.toml"
@@ -136,10 +142,11 @@ else
     echo "Checking workspace..."
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
     echo "Current version: ${workspace_version}"
+
     if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
         echo "Changes detected. Checking if version bump is required..."
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
-        echo "master version: ${master_workspace_version}"
+
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 2 ]]; then
             # Extract major, minor, and patch versions using regex and validate them
             if [[ $workspace_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
@@ -153,10 +160,14 @@ else
                     exit 1
                 fi 
 
+                # Increase the patch version
                 new_patch=$((patch + 1))
                 new_version="${major}.${minor}.${new_patch}"
 
+                # Update the workspace version in Cargo.toml
                 sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" Cargo.toml 
+
+                # Remove the backup file created by sed
                 rm Cargo.toml-e
 
                 git add Cargo.toml
