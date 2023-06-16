@@ -220,5 +220,5 @@ cargo fmt --all -- --check
 
 # Run cargo clippy
 # cargo clippy
-#
+
 echo "Pushing changes to remote..."
