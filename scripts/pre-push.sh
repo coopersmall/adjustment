@@ -97,6 +97,8 @@ if [ "$first_push" = true ]; then
         git commit -m "Bump versions"
     fi
 else
+    echo "$(git log --oneline --name-only "origin/master..HEAD" -- "${crate}/" | grep -q '^'"${crate}/")"
+
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
