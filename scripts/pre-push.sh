@@ -166,8 +166,10 @@ else
     if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "src/"); then
         echo "Changes detected. Checking if version bump is required..."
         master_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
+        echo "Master version: ${master_version}"
 
         # Compare the workspace version with the master version and update if necessary
+        echo "Checking if version bump is required..."
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 1 ]]; then
             echo "Version bump required. Bumping version..."
 
