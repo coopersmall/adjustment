@@ -71,7 +71,7 @@ if [ "$first_push" = true ]; then
             patch="${minor#*.}"
             new_patch=$((patch + 1))
             new_version="${major}.${minor}.${new_patch}"
-            sed -i.bak "s/^version = \".*\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
+            sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
             echo "Bumped ${crate} version to ${new_version}"
             git add "${crate}/Cargo.toml"
         fi
@@ -85,7 +85,7 @@ if [ "$first_push" = true ]; then
         patch="${minor#*.}"
         new_patch=$((patch + 1))
         new_version="${major}.${minor}.${new_patch}"
-        sed -i.bak "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
+        sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
         echo "Bumped workspace version to ${new_version}"
         git add Cargo.toml
     fi
@@ -107,8 +107,7 @@ else
                 minor="${crate_version#*.}"
                 patch="${minor#*.}"
                 new_version="${major}.${minor}.$((patch + 1))"
-                echo "$new_version"
-                sed -i.bak "s/^version = \".*\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
+                sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
                 echo "Bumped ${crate} version to ${new_version}"
                 git add "${crate}/Cargo.toml"
             fi
@@ -124,7 +123,7 @@ else
             minor="${workspace_version#*.}"
             patch="${minor#*.}"
             new_version="${major}.${minor}.$((patch + 1))"
-            sed -i.bak "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
+            sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
             echo "Bumped workspace version to ${new_version}"
             git add Cargo.toml
         fi
