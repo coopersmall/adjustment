@@ -16,7 +16,6 @@ fn main() {
             let invalid_error = Error::new()
                 .message(ErrorMessage::from_str(err))
                 .code(ErrorCode::Invalid)
-                .add_meta("service".to_string(), "test".to_string())
                 .build();
 
             let wrapped_error = Error::new()
