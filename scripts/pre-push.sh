@@ -163,7 +163,7 @@ else
 
     # Check if there are changes in the workspace directory since the last commit
     echo "Checking if workspace has changes..."
-    if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
+    if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- Cargo.toml); then
 
         echo "Changes detected."
         echo "Checking if version bump is required..."
@@ -180,7 +180,7 @@ else
 
                 # Validate if major, minor, and patch are valid integers
                 if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
-                    echo ". Double check the Cargo.toml file for the workspace."
+                    echo "The version must only contain numbers. Double check the Cargo.toml file for the workspace."
                     exit 1
                 fi 
 
@@ -198,7 +198,7 @@ else
                 echo "Bumped workspace version to ${new_version}"
                 echo
             else
-                echo "The version must only contain numbers. Double check the Cargo.toml file for the workspace."
+                echo "Invalid version number detected. Double check the Cargo.toml file for the workspace."
                 exit 1
             fi
         else
