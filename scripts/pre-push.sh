@@ -108,12 +108,18 @@ else
             echo "master version: ${master_version}"
             if version_compare "$crate_version" "$master_version" && [[ $? -le 2 ]]; then
                 echo "Version bump required. Bumping ${crate} version..."
-                [[ $current_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]
-                major="${BASH_REMATCH[1]}"
-                minor="${BASH_REMATCH[2]}"
-                patch="${BASH_REMATCH[3]}"
-                new_patch=$((patch + 1))
-                new_version="${major}.${minor}.${new_patch}"
+
+                # Extract major, minor, and patch versions using regex and validate them
+                if [[ $crate_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+                    major="${BASH_REMATCH[1]}"
+                    minor="${BASH_REMATCH[2]}"
+                    patch="${BASH_REMATCH[3]}"
+
+                # Validate if major, minor, and patch are valid integers
+                if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
+                    echo "Invalid version number detected. Exiting with status code 1."
+                    exit 1
+                fi 
 
                 sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
                 rm "${crate}/Cargo.toml-e"
@@ -134,12 +140,18 @@ else
         echo "master version: ${master_workspace_version}"
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 2 ]]; then
             echo "Version bump required. Bumping workspace version..."
-            [[ $current_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]
-            major="${BASH_REMATCH[1]}"
-            minor="${BASH_REMATCH[2]}"
-            patch="${BASH_REMATCH[3]}"
-            new_patch=$((patch + 1))
-            new_version="${major}.${minor}.${new_patch}"
+
+            # Extract major, minor, and patch versions using regex and validate them
+            if [[ $crate_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+                major="${BASH_REMATCH[1]}"
+                minor="${BASH_REMATCH[2]}"
+                patch="${BASH_REMATCH[3]}"
+
+            # Validate if major, minor, and patch are valid integers
+            if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
+                echo "Invalid version number detected. Exiting with status code 1."
+                exit 1
+            fi 
 
             sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
             rm Cargo.toml-e
