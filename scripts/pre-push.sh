@@ -112,7 +112,8 @@ else
                 minor="${workspace_version#*.}"
                 minor="${minor%%.*}"
                 patch="${workspace_version##*.}"
-                new_patch=$((patch + 1)) 
+                new_patch=$((patch + 1))
+                new_version="${major}.${minor}.${new_patch}" 
                 sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
                 rm "${crate}/Cargo.toml-e"
                 git add "${crate}/Cargo.toml"
@@ -135,7 +136,8 @@ else
             minor="${workspace_version#*.}"
             minor="${minor%%.*}"
             patch="${workspace_version##*.}"
-            new_patch=$((patch + 1)) 
+            new_patch=$((patch + 1))
+            new_version="${major}.${minor}.${new_patch}"
             sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
             rm Cargo.toml-e
             git add Cargo.toml
