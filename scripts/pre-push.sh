@@ -113,7 +113,7 @@ else
         if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
 
             echo "Changes detected. Checking if version bump is required..."
-            master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}')
+            master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
             echo "Master version: ${master_version}"
 
             # Compare the crate version with the master version and update if necessary
@@ -159,13 +159,13 @@ else
     done
 
     echo "Checking workspace version..."
-    workspace_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version =" && !seen){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; seen=1}}' Cargo.toml)
+    workspace_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' Cargo.toml)
     echo "Current version: ${workspace_version}"
 
     # Check if there are changes in the workspace directory since the last commit
     if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "src/"); then
         echo "Changes detected. Checking if version bump is required..."
-        master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}')
+        master_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
 
         # Compare the workspace version with the master version and update if necessary
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 1 ]]; then
