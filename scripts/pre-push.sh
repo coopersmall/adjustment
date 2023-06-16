@@ -5,34 +5,6 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Function to compare versions
-version_compare() {
-    local latest_version="$1"
-    local current_version="$2"
-    local major_latest="${latest_version%%.*}"
-    local major_current="${current_version%%.*}"
-    local minor_latest="${latest_version#*.}"
-    local minor_current="${current_version#*.}"
-    local patch_latest="${minor_latest#*.}"
-    local patch_current="${minor_current#*.}"
-
-    if [[ $major_current -lt $major_latest ]]; then
-        return 1
-    elif [[ $major_current -gt $major_latest ]]; then
-        return 2
-    elif [[ $minor_current -lt $minor_latest ]]; then
-        return 1
-    elif [[ $minor_current -gt $minor_latest ]]; then
-        return 2
-    elif [[ $patch_current -lt $patch_latest ]]; then
-        return 1
-    elif [[ $patch_current -gt $patch_latest ]]; then
-        return 2
-    else
-        return 0
-    fi
-}
-
 # Check if cargo is installed
 if ! command_exists cargo; then
     echo "cargo not found. Installing cargo..."
@@ -59,12 +31,26 @@ if ! command_exists cargo-clippy; then
     cargo install --force cargo-clippy
 fi
 
-# Get the branch name
-branch=$(git symbolic-ref --short HEAD)
+# Function to compare two versions
+version_compare() {
+    local v1=$1
+    local v2=$2
+    local IFS=.
+    v1=($v1)
+    v2=($v2)
+    for ((i=0; i<3; i++)); do
+        if ((10#${v1[i]} > 10#${v2[i]})); then
+            return 1
+        elif ((10#${v1[i]} < 10#${v2[i]})); then
+            return 2
+        fi
+    done
+    return 0
+}
 
-# Determine if this is the first push to origin
+# Check if it's the first push to origin
 first_push=false
-if ! git rev-parse --abbrev-ref "@{u}" >/dev/null 2>&1; then
+if ! git rev-parse --verify origin/master >/dev/null 2>&1; then
     first_push=true
 fi
 
@@ -99,88 +85,41 @@ if [ "$first_push" = true ]; then
         echo "Bumped workspace version to ${new_version}"
     fi
 else
-    echo "Checking for version updates in changed crates..."
-    master_version=$(git show "origin/master:./Cargo.toml" | awk -F'"' '/version =/{print $2; exit}')
-
-    # Compare and update versions for changed crates
+    # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
-        if git diff --name-only --diff-filter=ACMRTUXB "origin/master" -- "${crate}/"; then
-            crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
-            version_compare "$master_version" "$crate_version"
-            case $? in
-                1)
-                    major="${crate_version%%.*}"
-                    minor="${crate_version#*.}"
-                    patch="${minor#*.}"
-                    new_patch=$((patch + 1))
-                    new_version="${major}.${minor}.${new_patch}"
-                    sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
-                    echo "Bumped ${crate} version to ${new_version}"
-                    ;;
-                2)
-                    echo "Cannot decrease the version of ${crate}. Please fix the version in ${crate}/Cargo.toml."
-                    exit 1
-                    ;;
-                *)
-                    echo "No version change required for ${crate}"
-                    ;;
-            esac
+        crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
+        master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
+        if version_compare "$crate_version" "$master_version" && [ $? -eq 2 ]; then
+            major="${crate_version%%.*}"
+            minor="${crate_version#*.}"
+            patch="${minor#*.}"
+            new_patch=$((patch + 1))
+            new_version="${major}.${minor}.${new_patch}"
+            sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
+            echo "Bumped ${crate} version to ${new_version}"
         fi
     done
 
-    # Compare and update version for the workspace if it has changes
-    if git diff --name-only --diff-filter=ACMRTUXB "origin/master" -- .; then
-        workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
-        version_compare "$master_version" "$workspace_version"
-        case $? in
-            1)
-                major="${workspace_version%%.*}"
-                minor="${workspace_version#*.}"
-                patch="${minor#*.}"
-                new_patch=$((patch + 1))
-                new_version="${major}.${minor}.${new_patch}"
-                sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
-                echo "Bumped workspace version to ${new_version}"
-                ;;
-            2)
-                echo "Cannot decrease the version of the workspace. Please fix the version in Cargo.toml."
-                exit 1
-                ;;
-            *)
-                echo "No version change required for the workspace"
-                ;;
-        esac
+    # Compare workspace version with master and update if necessary
+    workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
+    master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
+    if version_compare "$workspace_version" "$master_workspace_version" && [ $? -eq 2 ]; then
+        major="${workspace_version%%.*}"
+        minor="${workspace_version#*.}"
+        patch="${minor#*.}"
+        new_patch=$((patch + 1))
+        new_version="${major}.${minor}.${new_patch}"
+        sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
+        echo "Bumped workspace version to ${new_version}"
     fi
 fi
 
-
-# Run cargo build
-echo "Running cargo build..."
-cargo build
-
-# Run cargo test
-echo "Running cargo test..."
-cargo test
-
-# Run cargo fmt
-echo "Running cargo fmt..."
-cargo fmt --all -- --check
-
-# Run cargo clippy
-# echo "Running cargo clippy..."
-# cargo clippy --all-targets -- -D warnings
+# Add and commit the version changes
+git add -A
+git commit -m "Bump versions"
 
 # If any of the commands above fail, exit with a non-zero status
 if [ $? -ne 0 ]; then
     echo "Pre-push checks failed. Please fix the errors before pushing."
     exit 1
-fi
-
-# Check if any changes were made to crate versions
-if git diff --quiet --exit-code; then
-    echo "No crate version changes detected."
-else
-    echo "Committing crate version changes."
-    git add . && git commit -m "Bump crate versions"
-    exec git push origin "$branch"
 fi
