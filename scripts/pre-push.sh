@@ -64,7 +64,7 @@ if [ "$first_push" = true ]; then
 
     # Increase the patch version for each crate with changes
     for crate in "utils" "common" "macros"; do
-        if git log --oneline --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)..HEAD" -- "${crate}/" | grep -q '.'; then
+        if ! git log --oneline "origin/master..HEAD" -- "${crate}/" | grep -q "Bump"; then
             crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
             major="${crate_version%%.*}"
             minor="${crate_version#*.}"
@@ -78,7 +78,7 @@ if [ "$first_push" = true ]; then
     done
 
     # Increase the patch version for the workspace if it has changes
-    if git log --oneline --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)..HEAD" -- . | grep -q '.'; then
+    if ! git log --oneline --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)..HEAD" -- . | grep -q '.'; then
         workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
         major="${workspace_version%%.*}"
         minor="${workspace_version#*.}"
@@ -150,4 +150,3 @@ cargo fmt --all -- --check
 
 # Run cargo clippy
 # cargo clippy
-
