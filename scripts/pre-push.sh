@@ -112,7 +112,8 @@ else
                 minor="${crate_version#*.}"
                 patch="${minor#*.}"
                 new_version="${major}.${minor}.$((patch + 1))"
-                perl -0777 -pe "s/(^\[package\].*?^\[.*?^version *= *\").*?(\".*)/\1$new_version\2/ms" "${crate}/Cargo.toml" > "${crate}/Cargo.toml.tmp" && mv "${crate}/Cargo.toml.tmp" "${crate}/Cargo.toml"
+                sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
+                rm "${crate}/Cargo.toml-e"
                 echo "Bumped ${crate} version to ${new_version}"
                 git add "${crate}/Cargo.toml"
             fi
@@ -133,7 +134,8 @@ else
             minor="${workspace_version#*.}"
             patch="${minor#*.}"
             new_version="${major}.${minor}.$((patch + 1))"
-            perl -0777 -pe "s/(^\[package\].*?^\[.*?^version *= *\").*?(\".*)/\1$new_version\2/ms" "${crate}/Cargo.toml" > "${crate}/Cargo.toml.tmp" && mv "${crate}/Cargo.toml.tmp" "${crate}/Cargo.toml"
+            sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
+            rm Cargo.toml-e
             echo "Bumped workspace version to ${new_version}"
             git add Cargo.toml
         fi
