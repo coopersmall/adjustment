@@ -105,7 +105,7 @@ else
     for crate in "utils" "common" "macros"; do
 
         echo "Checking ${crate} version..."
-        crate_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version =" && !seen){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; seen=1; exit}}' "${crate}/Cargo.toml")
+        crate_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version ="){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; exit}}' "${crate}/Cargo.toml")
         echo "Current version: ${crate_version}"
 
         # Check if there are changes in the crate directory since the last commit
