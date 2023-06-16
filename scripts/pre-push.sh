@@ -105,7 +105,7 @@ else
     for crate in "utils" "common" "macros"; do
 
         echo "Checking ${crate} version..."
-        crate_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version ="){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; exit}}' "${crate}/Cargo.toml")
+        crate_version=$(awk -F'"' '/\[package\]/,/^\[/{if ($1=="version"){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$3); print $3; exit}}' "${crate}/Cargo.toml")
         echo "Current version: ${crate_version}"
 
         echo "Checking for changes in ${crate}..."
