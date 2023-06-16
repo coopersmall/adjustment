@@ -108,14 +108,16 @@ else
             echo "master version: ${master_version}"
             if version_compare "$crate_version" "$master_version" && [[ $? -le 2 ]]; then
                 echo "Version bump required. Bumping ${crate} version..."
-                major="${workspace_version%%.*}"
-                minor="${workspace_version#*.}"
-                minor="${minor%%.*}"
-                patch="${workspace_version##*.}"
+                [[ $current_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]
+                major="${BASH_REMATCH[1]}"
+                minor="${BASH_REMATCH[2]}"
+                patch="${BASH_REMATCH[3]}"
                 new_patch=$((patch + 1))
-                new_version="${major}.${minor}.${new_patch}" 
+                new_version="${major}.${minor}.${new_patch}"
+
                 sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
                 rm "${crate}/Cargo.toml-e"
+
                 git add "${crate}/Cargo.toml"
                 echo "Bumped ${crate} version to ${new_version}"
             fi
@@ -132,14 +134,16 @@ else
         echo "master version: ${master_workspace_version}"
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 2 ]]; then
             echo "Version bump required. Bumping workspace version..."
-            major="${workspace_version%%.*}"
-            minor="${workspace_version#*.}"
-            minor="${minor%%.*}"
-            patch="${workspace_version##*.}"
+            [[ $current_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]
+            major="${BASH_REMATCH[1]}"
+            minor="${BASH_REMATCH[2]}"
+            patch="${BASH_REMATCH[3]}"
             new_patch=$((patch + 1))
             new_version="${major}.${minor}.${new_patch}"
+
             sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
             rm Cargo.toml-e
+
             git add Cargo.toml
             echo "Bumped workspace version to ${new_version}"
         fi
