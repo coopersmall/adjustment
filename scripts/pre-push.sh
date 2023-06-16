@@ -71,21 +71,21 @@ if [ "$first_push" = true ]; then
             patch="${minor#*.}"
             new_patch=$((patch + 1))
             new_version="${major}.${minor}.${new_patch}"
-            sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
+            sed -i.bak "s/^version = \".*\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
             echo "Bumped ${crate} version to ${new_version}"
             git add "${crate}/Cargo.toml"
         fi
     done
 
     # Increase the patch version for the workspace if it has changes
-    if ! git log --oneline --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)..HEAD" -- . | grep -q '.'; then
+    if ! git log --oneline --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)..HEAD" -- . | grep -q "Bump"; then
         workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
         major="${workspace_version%%.*}"
         minor="${workspace_version#*.}"
         patch="${minor#*.}"
         new_patch=$((patch + 1))
         new_version="${major}.${minor}.${new_patch}"
-        sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
+        sed -i.bak "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
         echo "Bumped workspace version to ${new_version}"
         git add Cargo.toml
     fi
@@ -100,7 +100,7 @@ else
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
-        if git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/" | grep -q '.'; then
+        if ! git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/" | grep -q '^'; then
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
             if version_compare "$crate_version" "$master_version" && [[ $? -le 2 ]]; then
                 major="${crate_version%%.*}"
@@ -108,7 +108,7 @@ else
                 patch="${minor#*.}"
                 new_patch=$(awk -F'.' '{print $3}' <<< "$master_version")
                 new_version="${major}.${minor}.${new_patch}"
-                sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
+                sed -i.bak "s/^version = \".*\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
                 echo "Bumped ${crate} version to ${new_version}"
                 git add "${crate}/Cargo.toml"
             fi
@@ -117,7 +117,7 @@ else
 
     # Compare workspace version with master and update if necessary
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
-    if git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- . | grep -q '.'; then
+    if ! git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- . | grep -q '^'; then
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 2 ]]; then
             major="${workspace_version%%.*}"
@@ -125,7 +125,7 @@ else
             patch="${minor#*.}"
             new_patch=$(awk -F'.' '{print $3}' <<< "$master_workspace_version")
             new_version="${major}.${minor}.${new_patch}"
-            sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
+            sed -i.bak "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
             echo "Bumped workspace version to ${new_version}"
             git add Cargo.toml
         fi
