@@ -248,7 +248,9 @@ else
             # Get the master version of the crate under [package]
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
             echo "Master version: ${master_version}"
-           
+
+            was_major_version_changed=false
+            was_minor_version_changed=false
 
             # Compare the crate major version with the master version and update if necessary
             if version_compare_major "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
@@ -264,6 +266,7 @@ else
                 # Validate if the only change in the commit is to the version variable in the Cargo.toml file
                 if validate_cargo_toml_change "${crate}/Cargo.toml"; then
                     echo "Successfully validated major version change!"
+                    was_major_version_changed=true
                 else
                     echo
                     echo "Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}."
@@ -285,6 +288,7 @@ else
                 # Validate if the only change in the commit is to the version variable in the Cargo.toml file
                 if validate_cargo_toml_change "${crate}/Cargo.toml"; then
                     echo "Successfully validated minor version change!"
+                    was_minor_version_changed=true
                 else
                     echo
                     echo "Unable to validate minor version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${crate}/Cargo.toml file."
@@ -293,9 +297,9 @@ else
             fi
 
             # Compare the crate version with the master version and update if necessary
-            if version_compare_major "$crate_version" "$master_version" && [[ $? -ne 2 ]] &&
-               version_compare_minor "$crate_version" "$master_version" && [[ $? -ne 2 ]] &&
-               version_compare_patch "$crate_version" "$master_version" && [[ $? -le 1 ]]; then
+            if version_compare_patch "$crate_version" "$master_version" && [[ $? -le 1 ]] &&
+                ! was_major_version_change &&
+                ! was_minor_version_changed; then
 
                 # Extract major, minor, and patch versions using regex and validate them
                 echo "Version bump required. Bumping version..."
