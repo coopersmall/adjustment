@@ -293,8 +293,8 @@ else
             fi
 
             # Compare the crate version with the master version and update if necessary
-            if version_compare_major "$crate_version" "$master_version" && [[ $? -ne 2 ]] ||
-               version_compare_minor "$crate_version" "$master_version" && [[ $? -ne 2 ]] ||
+            if version_compare_major "$crate_version" "$master_version" && [[ $? -ne 2 ]] &&
+               version_compare_minor "$crate_version" "$master_version" && [[ $? -ne 2 ]] &&
                version_compare_patch "$crate_version" "$master_version" && [[ $? -le 1 ]]; then
 
                 # Extract major, minor, and patch versions using regex and validate them
