@@ -76,7 +76,8 @@ if [ "$first_push" = true ]; then
     # Increase the patch version for each crate with changes
     for crate in "utils" "common" "macros"; do
         if git diff --name-only --diff-filter=ACMRTUXB "origin/master" -- "${crate}/"; then
-            crate_version=$(grep -Po '(?<=version = ")[^"]+' "${crate}/Cargo.toml")
+            master_version=$(git show "origin/master:./Cargo.toml" | awk -F'"' '/version =/{print $2; exit}')
+
             major="${crate_version%%.*}"
             minor="${crate_version#*.}"
             patch="${minor#*.}"
