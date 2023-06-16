@@ -15,6 +15,7 @@ pub fn common(_metadata: TokenStream, input: TokenStream) -> TokenStream {
         #[derive(Debug, Clone, PartialEq)]
         #input
     };
+
     output.into()
 }
 
