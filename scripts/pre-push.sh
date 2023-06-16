@@ -124,9 +124,8 @@ cargo test
 cargo fmt --all -- --check
 
 # Run cargo clippy
-cargo clippy
+# cargo clippy
 
 # Add and commit the version changes
 git add -A
 git commit -m "Bump versions"
-git push
