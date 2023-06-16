@@ -105,14 +105,14 @@ else
     for crate in "utils" "common" "macros"; do
 
         echo "Checking ${crate} version..."
-        crate_version=$(awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}' "${crate}/Cargo.toml")
+        crate_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version ="){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; exit}}' "${crate}/Cargo.toml")
         echo "Current version: ${crate_version}"
 
         # Check if there are changes in the crate directory since the last commit
         if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
 
             echo "Changes detected. Checking if version bump is required..."
-            master_version=$(git show "origin/master:${crate}Cargo.toml" | awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}')
+            master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}')
 
             # Compare the crate version with the master version and update if necessary
             if version_compare "$crate_version" "$master_version" && [[ $? -le 1 ]]; then
@@ -154,7 +154,7 @@ else
 
     # Compare workspace version with master and update if necessary
     echo "Checking workspace version..."
-    workspace_version=$(awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}' Cargo.toml)
+    workspace_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version ="){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; exit}}' Cargo.toml)
     echo "Current version: ${workspace_version}"
 
     if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "src/"); then
