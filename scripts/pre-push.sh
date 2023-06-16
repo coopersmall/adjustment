@@ -90,19 +90,21 @@ version_compare_major() {
 
 version_compare_minor() {
     if [[ $1 == $2 ]]; then
-        echo "The versions are the same."
         return 0
     fi
 
     IFS='.' read -ra v1 <<< "$1"
     IFS='.' read -ra v2 <<< "$2"
 
-    # Compare the minor versions
+    # Compare the minor version with master
     if ((10#${v1[1]:-0} == 10#${v2[1]:-0})); then
+        # The minor version is the same as master
         return 0
     elif ((10#${v1[1]:-0} < 10#${v2[1]:-0})); then
+        # The minor version is less than the master version
         return 1
     else
+        # The minor version is greater than the master version
         return 2
     fi
 
@@ -174,7 +176,6 @@ validate_cargo_toml_change() {
         changed_files=$(git diff --name-only "${commits[0]}")
 
        # Check if the only changed file is the Cargo.toml for the given crate,
-       # and if the version variable is the only change within the file
        if [[ $changed_files == "${file}" ]] && [[ $(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${file}") ]]; then
            return 0
        fi 
@@ -255,6 +256,7 @@ else
             # Compare the crate major version with the master version and update if necessary
             if version_compare_major "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
                 echo "Major version change detected in commit history. Validating version change..."
+                was_major_version_changed=true
 
                 # Validate that the major version was increase only by 1
                 if ! validate_major_version "$crate_version" "$master_version"; then
@@ -266,7 +268,6 @@ else
                 # Validate if the only change in the commit is to the version variable in the Cargo.toml file
                 if validate_cargo_toml_change "${crate}/Cargo.toml"; then
                     echo "Successfully validated major version change!"
-                    was_major_version_changed=true
                 else
                     echo
                     echo "Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}."
@@ -277,6 +278,7 @@ else
             # Compare the crate minor version with the master version and update if necessary
             if version_compare_minor "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
                 echo "Minor version change detected in commit history. Validating version change..."
+                was_minor_version_changed=true
 
                 # Validate that the minor version was increase only by 1
                 if ! validate_minor_version "$crate_version" "$master_version"; then
@@ -288,7 +290,6 @@ else
                 # Validate if the only change in the commit is to the version variable in the Cargo.toml file
                 if validate_cargo_toml_change "${crate}/Cargo.toml"; then
                     echo "Successfully validated minor version change!"
-                    was_minor_version_changed=true
                 else
                     echo
                     echo "Unable to validate minor version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${crate}/Cargo.toml file."
