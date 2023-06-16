@@ -82,10 +82,12 @@ install-hooks:
 	@echo "Installing pre-commit hook..."
 	@echo "#!/bin/bash" > .git/hooks/pre-commit
 	@cat $(PRE_COMMIT) >> .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
 
 	@echo "Installing pre-push hook..."
 	@echo "#!/bin/bash" > .git/hooks/pre-push
 	@cat $(PRE_COMMIT) >> .git/hooks/pre-push
+	@chmod +x .git/hooks/pre-push
 
 	@echo "Hooks installed successfully!"
 
