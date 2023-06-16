@@ -34,6 +34,7 @@ fi
 # Function to compare two versions
 version_compare() {
     if [[ $1 == $2 ]]; then
+        echo "The versions are the same."
         return 0
     fi
 
@@ -43,9 +44,11 @@ version_compare() {
     for ((i=0; i<${#v1[@]}; i++)); do
         if ((10#${v1[i]} < 10#${v2[i]})); then
             # v1 is less than v2
+            echo "The version is lower than the master version."
             return 1
-            # v1 is greater than v2
         elif ((10#${v1[i]} > 10#${v2[i]})); then
+            # v1 is greater than v2
+            echo "The version is greater than the master version."
             return 2
         fi
     done
@@ -118,7 +121,6 @@ else
             echo "Master version: ${master_version}"
 
             # Compare the crate version with the master version and update if necessary
-            echo "Checking if version bump is required..."
             if version_compare "$crate_version" "$master_version" && [[ $? -le 1 ]]; then
                 # Extract major, minor, and patch versions using regex and validate them
                 echo "Version bump required. Bumping version..."
@@ -172,7 +174,6 @@ else
         echo "Master version: ${master_version}"
 
         # Compare the workspace version with the master version and update if necessary
-        echo "Checking if version bump is required..."
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 1 ]]; then
             echo "Version bump required. Bumping version..."
 
