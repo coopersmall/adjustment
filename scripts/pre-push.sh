@@ -102,7 +102,7 @@ else
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
         if ! git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/" | grep -q '^'; then
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
-            if version_compare "$crate_version" "$master_version" && [[ $? -le 2 ]]; then
+            if version_compare "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
                 major="${crate_version%%.*}"
                 minor="${crate_version#*.}"
                 patch="${minor#*.}"
@@ -118,7 +118,7 @@ else
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
     if ! git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- . | grep -q '^'; then
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
-        if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 2 ]]; then
+        if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -eq 2 ]]; then
             major="${workspace_version%%.*}"
             minor="${workspace_version#*.}"
             patch="${minor#*.}"
