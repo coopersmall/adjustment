@@ -108,14 +108,15 @@ else
             echo "master version: ${master_version}"
             if version_compare "$crate_version" "$master_version" && [[ $? -le 2 ]]; then
                 echo "Version bump required. Bumping ${crate} version..."
-                major="${crate_version%%.*}"
-                minor="${crate_version#*.}"
-                patch="${minor#*.}"
-                new_version="${major}.${minor}.$((patch + 1))"
+                major="${workspace_version%%.*}"
+                minor="${workspace_version#*.}"
+                minor="${minor%%.*}"
+                patch="${workspace_version##*.}"
+                new_patch=$((patch + 1)) 
                 sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
                 rm "${crate}/Cargo.toml-e"
-                echo "Bumped ${crate} version to ${new_version}"
                 git add "${crate}/Cargo.toml"
+                echo "Bumped ${crate} version to ${new_version}"
             fi
         fi
     done
@@ -132,12 +133,13 @@ else
             echo "Version bump required. Bumping workspace version..."
             major="${workspace_version%%.*}"
             minor="${workspace_version#*.}"
-            patch="${minor#*.}"
-            new_version="${major}.${minor}.$((patch + 1))"
+            minor="${minor%%.*}"
+            patch="${workspace_version##*.}"
+            new_patch=$((patch + 1)) 
             sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" 
             rm Cargo.toml-e
-            echo "Bumped workspace version to ${new_version}"
             git add Cargo.toml
+            echo "Bumped workspace version to ${new_version}"
         fi
     fi
 
