@@ -99,6 +99,7 @@ if [ "$first_push" = true ]; then
 else
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
+        echo "Checking ${crate}..."
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
         if ! output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
