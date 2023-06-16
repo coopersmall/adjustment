@@ -42,7 +42,9 @@ version_compare() {
 
     for ((i=0; i<${#v1[@]}; i++)); do
         if ((10#${v1[i]} < 10#${v2[i]})); then
+            # v1 is less than v2
             return 1
+            # v1 is greater than v2
         elif ((10#${v1[i]} > 10#${v2[i]})); then
             return 2
         fi
@@ -109,8 +111,10 @@ else
             echo "Changes detected. Checking if version bump is required..."
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
 
-            if version_compare "$crate_version" "$master_version" && [[ $? -le 2 ]]; then
+            # Compare the crate version with the master version and update if necessary
+            if version_compare "$crate_version" "$master_version" && [[ $? -le 1 ]]; then
                 # Extract major, minor, and patch versions using regex and validate them
+                echo "Version bump required. Bumping version..."
                 if [[ $crate_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
                     major="${BASH_REMATCH[1]}"
                     minor="${BASH_REMATCH[2]}"
@@ -147,7 +151,9 @@ else
         echo "Changes detected. Checking if version bump is required..."
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
 
-        if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 2 ]]; then
+        # Compare the workspace version with the master version and update if necessary
+        if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 1 ]]; then
+            echo "Version bump required. Bumping version..."
             # Extract major, minor, and patch versions using regex and validate them
             if [[ $workspace_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
                 major="${BASH_REMATCH[1]}"
