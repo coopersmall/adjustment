@@ -74,7 +74,6 @@ if [ "$first_push" = true ]; then
             sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
             echo "Bumped ${crate} version to ${new_version}"
             git add "${crate}/Cargo.toml"
-            git commit -m "Bump ${crate} version to ${new_version}"
         fi
     done
 
@@ -89,7 +88,13 @@ if [ "$first_push" = true ]; then
         sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
         echo "Bumped workspace version to ${new_version}"
         git add Cargo.toml
-        git commit -m "Bump workspace version to ${new_version}"
+    fi
+
+    # Commit the changes if there are modifications
+    if git diff --cached --quiet; then
+        echo "No version changes detected. Nothing to commit."
+    else
+        git commit -m "Bump versions"
     fi
 else
     # Compare crate versions with master and update if necessary
@@ -105,7 +110,6 @@ else
             sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
             echo "Bumped ${crate} version to ${new_version}"
             git add "${crate}/Cargo.toml"
-            git commit -m "Bump ${crate} version to ${new_version}"
         fi
     done
 
@@ -121,7 +125,13 @@ else
         sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
         echo "Bumped workspace version to ${new_version}"
         git add Cargo.toml
-        git commit -m "Bump workspace version to ${new_version}"
+    fi
+
+    # Commit the changes if there are modifications
+    if git diff --cached --quiet; then
+        echo "No version changes detected. Nothing to commit."
+    else
+        git commit -m "Bump versions"
     fi
 fi
 
