@@ -127,6 +127,7 @@ else
 
                 git add "${crate}/Cargo.toml"
                 echo "Bumped ${crate} version to ${new_version}"
+                fi
             fi
         fi
     done
