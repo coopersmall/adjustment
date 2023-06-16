@@ -26,6 +26,7 @@ pub fn serializeable(_metadata: TokenStream, input: TokenStream) -> TokenStream 
         #[derive(Serialize)]
         #input
     };
+
     output.into()
 }
 

@@ -120,9 +120,12 @@ else
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 2 ]]; then
             major="${workspace_version%%.*}"
+            echo "$major"
             minor="${workspace_version#*.}"
+            echo "$minor"
             patch="${minor#*.}"
             new_version="${major}.${minor}.$((patch + 1))"
+            echo "$new_version"
             sed -i.bak "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
             echo "Bumped workspace version to ${new_version}"
             git add Cargo.toml
