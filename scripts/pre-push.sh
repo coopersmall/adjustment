@@ -101,6 +101,7 @@ else
     for crate in "utils" "common" "macros"; do
         echo "Checking ${crate}..."
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
+        echo "Current version: ${crate_version}"
         if ! output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
             echo "master version: ${master_version}"
