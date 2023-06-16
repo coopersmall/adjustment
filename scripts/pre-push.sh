@@ -105,7 +105,7 @@ else
     for crate in "utils" "common" "macros"; do
 
         echo "Checking ${crate} version..."
-        crate_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version ="){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; exit}}' "${crate}/Cargo.toml")
+        crate_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version =" && !seen){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; seen=1}}' "${crate}/Cargo.toml")
         echo "Current version: ${crate_version}"
 
         # Check if there are changes in the crate directory since the last commit
@@ -133,7 +133,8 @@ else
                     new_version="${major}.${minor}.${new_patch}"
 
                     # Update the version in Cargo.toml
-                    sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml"
+                    sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" > temp
+                    mv temp "${crate}/Cargo.toml"
 
                     # Remove the backup file created by sed
                     rm "${crate}/Cargo.toml-e"
@@ -156,7 +157,7 @@ else
     done
 
     echo "Checking workspace version..."
-    workspace_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version ="){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; exit}}' Cargo.toml)
+    workspace_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version =" && !seen){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; seen=1}}' Cargo.toml)
     echo "Current version: ${workspace_version}"
 
     # Check if there are changes in the workspace directory since the last commit
@@ -185,7 +186,8 @@ else
                 new_version="${major}.${minor}.${new_patch}"
 
                 # Update the workspace version in Cargo.toml
-                sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" Cargo.toml 
+                sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" Cargo.toml > temp
+                mv temp Cargo.toml
 
                 # Remove the backup file created by sed
                 rm Cargo.toml-e
