@@ -102,10 +102,11 @@ else
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
 
-        echo "Checking ${crate}..."
+        echo "Checking ${crate} version..."
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
         echo "Current version: ${crate_version}"
 
+        # Check if there are changes in the crate directory since the last commit
         if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
 
             echo "Changes detected. Checking if version bump is required..."
@@ -122,7 +123,7 @@ else
 
                     # Validate if major, minor, and patch are valid integers
                     if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
-                        echo "Invalid version number detected. Exiting with status code 1."
+                        echo "The version must only contain numbers. Double check the Cargo.toml file for ${crate}."
                         exit 1
                     fi
 
@@ -137,13 +138,18 @@ else
 
                     git add "${crate}/Cargo.toml"
                     echo "Bumped ${crate} version to ${new_version}"
+                else
+                    echo "Invalid version number detected. Double check the Cargo.toml file for ${crate}."
+                    exit 1
                 fi
+            else
+                echo "No version bump required."
             fi
         fi
     done
 
     # Compare workspace version with master and update if necessary
-    echo "Checking workspace..."
+    echo "Checking workspace version..."
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
     echo "Current version: ${workspace_version}"
 
@@ -162,7 +168,7 @@ else
 
                 # Validate if major, minor, and patch are valid integers
                 if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
-                    echo "Invalid version number detected. Exiting with status code 1."
+                    echo ". Double check the Cargo.toml file for the workspace."
                     exit 1
                 fi 
 
@@ -178,7 +184,12 @@ else
 
                 git add Cargo.toml
                 echo "Bumped workspace version to ${new_version}"
+            else
+                echo "The version must only contain numbers. Double check the Cargo.toml file for the workspace."
+                exit 1
             fi
+        else
+            echo "No version bump required."
         fi
     fi
 
@@ -186,7 +197,10 @@ else
     if git diff --cached --quiet; then
         echo "No version changes detected. Nothing to commit."
     else
-        git commit -m "Bump versions"
+        echo "Committing version changes..."
+        git commit -m "bump versions"
+        version_commit_sha=$(git rev-parse HEAD)
+        echo "Version changes commited. Name: bump version SHA: ${version_commit_sha}"
     fi
 fi
 
@@ -201,3 +215,5 @@ cargo fmt --all -- --check
 
 # Run cargo clippy
 # cargo clippy
+#
+echo "Pushing changes to remote..."
