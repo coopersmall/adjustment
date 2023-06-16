@@ -236,13 +236,13 @@ else
     for crate in "utils" "common" "macros" "workspace"; do
         echo "Checking ${crate} version..."
         if [ "${crate}" = "workspace" ]; then
-            toml="Cargo.toml"
+            toml_path="Cargo.toml"
         else
-            toml="${crate}/Cargo.toml"
+            toml_path="${crate}/Cargo.toml"
         fi
 
         # Get the current version of the crate under [package]
-        crate_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${toml}")
+        crate_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${toml_path}")
         echo "Current version: ${crate_version}"
 
         # Check if there are changes in the crate directory since the last commit
@@ -252,7 +252,7 @@ else
             echo "Checking if version bump is required..."
 
             # Get the master version of the crate under [package]
-            master_version=$(git show "origin/master:${toml}" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
+            master_version=$(git show "origin/master:${toml_path}" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
             echo "Master version: ${master_version}"
 
             was_major_version_changed=false
@@ -266,12 +266,12 @@ else
                 # Validate that the major version was increase only by 1
                 if ! validate_major_version "$crate_version" "$master_version"; then
                     echo
-                    echo "Unable to validate major version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${toml} file."
+                    echo "Unable to validate major version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${toml_path} file."
                     exit 1
                 fi
 
                 # Validate if the only change in the commit is to the version variable in the Cargo.toml file
-                if validate_cargo_toml_change "${toml}"; then
+                if validate_cargo_toml_change "${toml_path}"; then
                     echo "Successfully validated major version change!"
                 else
                     echo
@@ -293,7 +293,7 @@ else
                 fi
 
                 # Validate if the only change in the commit is to the version variable in the Cargo.toml file
-                if validate_cargo_toml_change "${toml}"; then
+                if validate_cargo_toml_change "${toml_path}"; then
                     echo "Successfully validated minor version change!"
                 else
                     echo
@@ -331,9 +331,9 @@ else
                 new_version="${major}.${minor}.${new_patch}"
 
                 # Update the version in Cargo.toml
-                sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${toml}" > temp
-                mv temp "${toml}"
-                git add "${toml}"
+                sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${toml_path}" > temp
+                mv temp "${toml_path}"
+                git add "${toml_path}"
 
                 echo "Bumped ${crate} version to ${new_version}"
                 echo
