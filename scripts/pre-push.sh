@@ -67,6 +67,29 @@ version_compare() {
     return 0
 }
 
+version_compare_patch() {
+    if [[ $1 == $2 ]]; then
+        echo "The versions are the same."
+        return 0
+    fi
+
+    IFS='.' read -ra v1 <<< "$1"
+    IFS='.' read -ra v2 <<< "$2"
+
+    # Compare the patch versions
+    if ((10#${v1[2]:-0} < 10#${v2[2]:-0})); then
+        echo "The patch version is less than the master version."
+        return 1
+    elif ((10#${v1[2]:-0} == 10#${v2[2]:-0})); then
+        echo "The patch version is equal to the master version."
+    else
+        echo "The patch version is greater than the master version."
+        return 2
+    fi
+
+    return 0
+}
+
 # Check if it's the first push to origin
 first_push=false
 if ! git rev-parse --verify origin/master >/dev/null 2>&1; then
@@ -132,7 +155,7 @@ else
             echo "Master version: ${master_version}"
 
             # Compare the crate version with the master version and update if necessary
-            if version_compare "$crate_version" "$master_version" && [[ $? -le 1 ]]; then
+            if version_compare_patch "$crate_version" "$master_version" && [[ $? -le 1 ]]; then
                 # Extract major, minor, and patch versions using regex and validate them
                 echo "Version bump required. Bumping version..."
                 if [[ $crate_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
@@ -185,7 +208,7 @@ else
         echo "Master version: ${master_version}"
 
         # Compare the workspace version with the master version and update if necessary
-        if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 1 ]]; then
+        if version_compare_patch "$workspace_version" "$master_workspace_version" && [[ $? -le 1 ]]; then
             echo "Version bump required. Bumping version..."
 
             # Extract major, minor, and patch versions using regex and validate them
