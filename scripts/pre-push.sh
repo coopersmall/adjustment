@@ -101,9 +101,9 @@ else
     for crate in "utils" "common" "macros"; do
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
         if git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/" | grep -q '.'; then
-            echo "here"
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
             if version_compare "$crate_version" "$master_version" && [[ $? == 2 ]]; then
+                echo "here"
                 major="${crate_version%%.*}"
                 minor="${crate_version#*.}"
                 patch="${minor#*.}"
