@@ -34,6 +34,7 @@ fi
 # Function to compare two versions
 version_compare() {
     if [[ $1 == $2 ]]; then
+        # v1 is equal to v2
         return 0
     fi
 
@@ -107,9 +108,11 @@ else
         echo "Current version: ${crate_version}"
 
         # Check if there are changes in the crate directory since the last commit
+        echo "Checking if ${crate} has changes..."
         if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
 
-            echo "Changes detected. Checking if version bump is required..."
+            echo "Changes detected."
+            echo "Checking if version bump is required..."
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
 
             # Compare the crate version with the master version and update if necessary
@@ -145,6 +148,8 @@ else
             else
                 echo "No version bump required."
             fi
+        else
+            echo "No changes detected."
         fi
     done
 
@@ -153,8 +158,12 @@ else
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
     echo "Current version: ${workspace_version}"
 
+    # Check if there are changes in the workspace directory since the last commit
+    echo "Checking if workspace has changes..."
     if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
-        echo "Changes detected. Checking if version bump is required..."
+
+        echo "Changes detected."
+        echo "Checking if version bump is required..."
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
 
         # Compare the workspace version with the master version and update if necessary
@@ -191,6 +200,8 @@ else
         else
             echo "No version bump required."
         fi
+    else
+        echo "No changes detected."
     fi
 
     # Commit the changes if there are modifications
