@@ -102,6 +102,7 @@ else
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
         if ! git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/" | grep -q '^'; then
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
+            echo "master version: ${master_version}"
             if version_compare "$crate_version" "$master_version" && [[ $? -le 2 ]]; then
                 major="${crate_version%%.*}"
                 minor="${crate_version#*.}"
