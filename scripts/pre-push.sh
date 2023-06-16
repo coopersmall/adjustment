@@ -153,7 +153,7 @@ else
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
     echo "Current version: ${workspace_version}"
 
-    if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- Cargo.toml); then
+    if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "src/"); then
         echo "Changes detected. Checking if version bump is required..."
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
 
@@ -168,7 +168,7 @@ else
 
                 # Validate if major, minor, and patch are valid integers
                 if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
-                    echo ". Double check the Cargo.toml file for the workspace."
+                    echo "The version must only contain numbers. Double check the Cargo.toml file for the workspace."
                     exit 1
                 fi 
 
@@ -184,13 +184,18 @@ else
 
                 git add Cargo.toml
                 echo "Bumped workspace version to ${new_version}"
+                echo
             else
-                echo "The version must only contain numbers. Double check the Cargo.toml file for the workspace."
+                echo "Invalid version number detected. Double check the Cargo.toml file for the workspace."
                 exit 1
             fi
         else
             echo "No version bump required."
+            echo
         fi
+    else
+        echo "No changes detected."
+        echo
     fi
 
     # Commit the changes if there are modifications
