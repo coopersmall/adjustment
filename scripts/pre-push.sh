@@ -113,20 +113,20 @@ else
                     minor="${BASH_REMATCH[2]}"
                     patch="${BASH_REMATCH[3]}"
 
-                # Validate if major, minor, and patch are valid integers
-                if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
-                    echo "Invalid version number detected. Exiting with status code 1."
-                    exit 1
-                fi
+                    # Validate if major, minor, and patch are valid integers
+                    if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
+                        echo "Invalid version number detected. Exiting with status code 1."
+                        exit 1
+                    fi
 
-                new_patch=$((patch + 1))
-                new_version="${major}.${minor}.${new_patch}"
+                    new_patch=$((patch + 1))
+                    new_version="${major}.${minor}.${new_patch}"
 
-                sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml"
-                rm "${crate}/Cargo.toml-e"
+                    sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml"
+                    rm "${crate}/Cargo.toml-e"
 
-                git add "${crate}/Cargo.toml"
-                echo "Bumped ${crate} version to ${new_version}"
+                    git add "${crate}/Cargo.toml"
+                    echo "Bumped ${crate} version to ${new_version}"
                 fi
             fi
         fi
@@ -141,12 +141,11 @@ else
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
         echo "master version: ${master_workspace_version}"
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 2 ]]; then
-            echo "Version bump required. Bumping workspace version..."
-                # Extract major, minor, and patch versions using regex and validate them
-                if [[ $workspace_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-                    major="${BASH_REMATCH[1]}"
-                    minor="${BASH_REMATCH[2]}"
-                    patch="${BASH_REMATCH[3]}"
+            # Extract major, minor, and patch versions using regex and validate them
+            if [[ $workspace_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+                major="${BASH_REMATCH[1]}"
+                minor="${BASH_REMATCH[2]}"
+                patch="${BASH_REMATCH[3]}"
 
                 # Validate if major, minor, and patch are valid integers
                 if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
@@ -154,11 +153,15 @@ else
                     exit 1
                 fi 
 
+                new_patch=$((patch + 1))
+                new_version="${major}.${minor}.${new_patch}"
+
                 sed -i -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" Cargo.toml 
                 rm Cargo.toml-e
 
                 git add Cargo.toml
                 echo "Bumped workspace version to ${new_version}"
+            fi
         fi
     fi
 
@@ -181,4 +184,3 @@ cargo fmt --all -- --check
 
 # Run cargo clippy
 # cargo clippy
-
