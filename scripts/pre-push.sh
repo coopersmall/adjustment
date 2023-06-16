@@ -64,7 +64,7 @@ if [ "$first_push" = true ]; then
 
     # Increase the patch version for each crate with changes
     for crate in "utils" "common" "macros"; do
-        if git diff --name-only --diff-filter=ACMRTUXB "origin/master" -- "${crate}/"; then
+        if git log --oneline -- "${crate}/" | awk '/Bump/{exit 1}'; then
             crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
             major="${crate_version%%.*}"
             minor="${crate_version#*.}"
@@ -78,7 +78,7 @@ if [ "$first_push" = true ]; then
     done
 
     # Increase the patch version for the workspace if it has changes
-    if git diff --name-only --diff-filter=ACMRTUXB "origin/master" -- .; then
+    if git log --oneline -- . | awk '/Bump/{exit 1}'; then
         workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
         major="${workspace_version%%.*}"
         minor="${workspace_version#*.}"
@@ -100,31 +100,35 @@ else
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
-        master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
-        if version_compare "$crate_version" "$master_version" && [[ $? == 2 ]]; then
-            major="${crate_version%%.*}"
-            minor="${crate_version#*.}"
-            patch="${minor#*.}"
-            new_patch=$((patch + 1))
-            new_version="${major}.${minor}.${new_patch}"
-            sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
-            echo "Bumped ${crate} version to ${new_version}"
-            git add "${crate}/Cargo.toml"
+        if git log --oneline "origin/master..HEAD" -- "${crate}/" | awk '/Bump/{exit 1}'; then
+            master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
+            if version_compare "$crate_version" "$master_version" && [[ $? == 2 ]]; then
+                major="${crate_version%%.*}"
+                minor="${crate_version#*.}"
+                patch="${minor#*.}"
+                new_patch=$((patch + 1))
+                new_version="${major}.${minor}.${new_patch}"
+                sed -i "s/version = \"${crate_version}\"/version = \"${new_version}\"/" "${crate}/Cargo.toml"
+                echo "Bumped ${crate} version to ${new_version}"
+                git add "${crate}/Cargo.toml"
+            fi
         fi
     done
 
     # Compare workspace version with master and update if necessary
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
-    master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
-    if version_compare "$workspace_version" "$master_workspace_version" && [[ $? == 2 ]]; then
-        major="${workspace_version%%.*}"
-        minor="${workspace_version#*.}"
-        patch="${minor#*.}"
-        new_patch=$((patch + 1))
-        new_version="${major}.${minor}.${new_patch}"
-        sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
-        echo "Bumped workspace version to ${new_version}"
-        git add Cargo.toml
+    if git log --oneline "origin/master..HEAD" -- . | awk '/Bump/{exit 1}'; then
+        master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
+        if version_compare "$workspace_version" "$master_workspace_version" && [[ $? == 2 ]]; then
+            major="${workspace_version%%.*}"
+            minor="${workspace_version#*.}"
+            patch="${minor#*.}"
+            new_patch=$((patch + 1))
+            new_version="${major}.${minor}.${new_patch}"
+            sed -i "s/version = \"${workspace_version}\"/version = \"${new_version}\"/" Cargo.toml
+            echo "Bumped workspace version to ${new_version}"
+            git add Cargo.toml
+        fi
     fi
 
     # Commit the changes if there are modifications
@@ -146,3 +150,4 @@ cargo fmt --all -- --check
 
 # Run cargo clippy
 # cargo clippy
+
