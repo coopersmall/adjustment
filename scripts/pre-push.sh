@@ -41,9 +41,9 @@ version_compare() {
     IFS='.' read -ra v2 <<< "$2"
 
     for ((i=0; i<${#v1[@]}; i++)); do
-        if ((10#${v1[i]} > 10#${v2[i]})); then
+        if ((10#${v1[i]} < 10#${v2[i]})); then
             return 1
-        elif ((10#${v1[i]} < 10#${v2[i]})); then
+        elif ((10#${v1[i]} > 10#${v2[i]})); then
             return 2
         fi
     done
@@ -102,10 +102,12 @@ else
         echo "Checking ${crate}..."
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
         echo "Current version: ${crate_version}"
-        if ! output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
+        if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
+            echo "Changes detected. Checking if version bump is required..."
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
             echo "master version: ${master_version}"
             if version_compare "$crate_version" "$master_version" && [[ $? -le 2 ]]; then
+                echo "Version bump required. Bumping ${crate} version..."
                 major="${crate_version%%.*}"
                 minor="${crate_version#*.}"
                 patch="${minor#*.}"
@@ -118,10 +120,15 @@ else
     done
 
     # Compare workspace version with master and update if necessary
+    echo "Checking workspace..."
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
-    if ! output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
+    echo "Current version: ${workspace_version}"
+    if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
+        echo "Changes detected. Checking if version bump is required..."
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
+        echo "master version: ${master_workspace_version}"
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 2 ]]; then
+            echo "Version bump required. Bumping workspace version..."
             major="${workspace_version%%.*}"
             minor="${workspace_version#*.}"
             patch="${minor#*.}"
