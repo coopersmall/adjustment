@@ -92,7 +92,7 @@ else
     for crate in "utils" "common" "macros"; do
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
         master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
-        if version_compare "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
+        if version_compare "$crate_version" "$master_version" && [[ $? == 2 ]]; then
             major="${crate_version%%.*}"
             minor="${crate_version#*.}"
             patch="${minor#*.}"
@@ -106,7 +106,7 @@ else
     # Compare workspace version with master and update if necessary
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
     master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
-    if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -eq 2 ]]; then
+    if version_compare "$workspace_version" "$master_workspace_version" && [[ $? == 2 ]]; then
         major="${workspace_version%%.*}"
         minor="${workspace_version#*.}"
         patch="${minor#*.}"
