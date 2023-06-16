@@ -149,14 +149,17 @@ else
                 echo "No version bump required."
                 echo
             fi
+        else
+            echo "No changes detected."
+            echo
         fi
     done
 
-    # Compare workspace version with master and update if necessary
     echo "Checking workspace version..."
     workspace_version=$(awk -F'"' '/^\[package\]$/,/^\[/ {if ($1=="version ="){gsub(/^[[:space:]]+|"[[:space:]]+$/,"",$2); print $2; exit}}' Cargo.toml)
     echo "Current version: ${workspace_version}"
 
+    # Check if there are changes in the workspace directory since the last commit
     if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "src/"); then
         echo "Changes detected. Checking if version bump is required..."
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}')
@@ -164,6 +167,7 @@ else
         # Compare the workspace version with the master version and update if necessary
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 1 ]]; then
             echo "Version bump required. Bumping version..."
+
             # Extract major, minor, and patch versions using regex and validate them
             if [[ $workspace_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
                 major="${BASH_REMATCH[1]}"
