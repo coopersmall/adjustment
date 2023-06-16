@@ -77,13 +77,11 @@ version_compare_patch() {
     IFS='.' read -ra v2 <<< "$2"
 
     # Compare the patch versions
-    if ((10#${v1[2]:-0} < 10#${v2[2]:-0})); then
-        echo "The patch version is less than the master version."
+    if ((10#${v1[2]:-0} == 10#${v2[2]:-0})); then
+        return 0
+    elif ((10#${v1[2]:-0} < 10#${v2[2]:-0})); then
         return 1
-    elif ((10#${v1[2]:-0} == 10#${v2[2]:-0})); then
-        echo "The patch version is equal to the master version."
     else
-        echo "The patch version is greater than the master version."
         return 2
     fi
 
@@ -99,7 +97,6 @@ fi
 # Update crate versions if changes were made
 if [ "$first_push" = true ]; then
     echo "First push to origin. Bumping versions for all crates."
-    cargo update --workspace
 
     # Increase the patch version for each crate with changes
     for crate in "utils" "common" "macros"; do
@@ -138,19 +135,21 @@ if [ "$first_push" = true ]; then
 else
     echo "Checking for version changes..."
     echo
+
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
-
         echo "Checking ${crate} version..."
+        # Get the current version of the crate under [package]
         crate_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${crate}/Cargo.toml")
         echo "Current version: ${crate_version}"
 
         echo "Checking for changes in ${crate}..."
         # Check if there are changes in the crate directory since the last commit
         if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
-
             echo "Changes detected in ${crate}."
             echo "Checking if version bump is required..."
+
+            # Get the master version of the crate under [package]
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
             echo "Master version: ${master_version}"
 
@@ -175,11 +174,8 @@ else
                     # Update the version in Cargo.toml
                     sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${crate}/Cargo.toml" > temp
                     mv temp "${crate}/Cargo.toml"
-
-                    # Remove the backup file created by sed
-                    rm "${crate}/Cargo.toml-e"
-
                     git add "${crate}/Cargo.toml"
+
                     echo "Bumped ${crate} version to ${new_version}"
                     echo
                 else
@@ -197,13 +193,17 @@ else
     done
 
     echo "Checking workspace version..."
+    # Get the current version of the workspace under [package]
     workspace_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' Cargo.toml)
     echo "Current version: ${workspace_version}"
 
+    echo "Checking for changes in workspace..."
     # Check if there are changes in the workspace directory since the last commit
     if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "src/"); then
         echo "Changes detected"
         echo "Checking if version bump is required..."
+
+        # Get the master version of the workspace under [package]
         master_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
         echo "Master version: ${master_version}"
 
@@ -230,11 +230,8 @@ else
                 # Update the workspace version in Cargo.toml
                 sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" Cargo.toml > temp
                 mv temp Cargo.toml
-
-                # Remove the backup file created by sed
-                rm Cargo.toml-e
-
                 git add Cargo.toml
+
                 echo "Bumped workspace version to ${new_version}"
                 echo
             else
