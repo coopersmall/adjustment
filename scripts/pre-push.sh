@@ -153,7 +153,7 @@ else
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
     echo "Current version: ${workspace_version}"
 
-    if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
+    if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- Cargo.toml); then
         echo "Changes detected. Checking if version bump is required..."
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
 
