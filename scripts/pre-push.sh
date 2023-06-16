@@ -97,12 +97,12 @@ if [ "$first_push" = true ]; then
         git commit -m "Bump versions"
     fi
 else
-    echo "$(git log --oneline --name-only "origin/master..HEAD" -- "${crate}/" | grep -q '^'"${crate}/")"
+    echo "$(git diff --name-only --diff-filter=ACMRTUXB "origin/master" -- "${crate}/")"
 
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
         crate_version=$(awk -F'"' '/version =/{print $2}' "${crate}/Cargo.toml")
-        if git log --oneline --name-only "origin/master..HEAD" -- "${crate}/" | grep -q '^'"${crate}/"; then
+        if git diff --name-only --diff-filter=ACMRTUXB "origin/master" -- "${crate}/"; then
             master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
             if version_compare "$crate_version" "$master_version" && [[ $? == 2 ]]; then
                 major="${crate_version%%.*}"
@@ -119,7 +119,7 @@ else
 
     # Compare workspace version with master and update if necessary
     workspace_version=$(awk -F'"' '/version =/{print $2}' Cargo.toml)
-    if git log --oneline --name-only "origin/master..HEAD" -- "${crate}/" | grep -q '^'"${crate}/"; then
+    if git diff --name-only --diff-filter=ACMRTUXB "origin/master" -- "${crate}/"; then
         master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? == 2 ]]; then
             major="${workspace_version%%.*}"
