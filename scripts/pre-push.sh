@@ -156,8 +156,6 @@ else
     echo "Checking workspace version..."
     workspace_version=$(awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}' Cargo.toml)
     echo "Current version: ${workspace_version}"
-    echo $workspace_version
-    echo $workspace_version
 
     if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "src/"); then
         echo "Changes detected. Checking if version bump is required..."
