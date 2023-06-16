@@ -235,7 +235,7 @@ else
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros" "workspace"; do
         echo "Checking ${crate} version..."
-        if ${crate} == "workspace"; then
+        if [ "${crate}" = "workspace" ]; then
             toml="Cargo.toml"
         else
             toml="${crate}/Cargo.toml"
