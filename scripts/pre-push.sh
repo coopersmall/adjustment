@@ -99,6 +99,8 @@ if [ "$first_push" = true ]; then
         git commit -m "Bump versions"
     fi
 else
+    echo "Checking for version changes..."
+    echo
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros"; do
 
@@ -110,7 +112,7 @@ else
         if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
 
             echo "Changes detected. Checking if version bump is required..."
-            master_version=$(git show "origin/master:${crate}/Cargo.toml" | awk -F'"' '/version =/{print $2}')
+            master_workspace_version=$(git show "origin/master:${crate}Cargo.toml" | awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}')
 
             # Compare the crate version with the master version and update if necessary
             if version_compare "$crate_version" "$master_version" && [[ $? -le 1 ]]; then
@@ -157,7 +159,7 @@ else
 
     if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "src/"); then
         echo "Changes detected. Checking if version bump is required..."
-        master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/version =/{print $2}')
+        master_workspace_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/^\[package\]$/,/^\[/{if ($1=="version ="){print $2; exit}}')
 
         # Compare the workspace version with the master version and update if necessary
         if version_compare "$workspace_version" "$master_workspace_version" && [[ $? -le 1 ]]; then
