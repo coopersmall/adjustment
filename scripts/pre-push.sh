@@ -114,12 +114,19 @@ else
     fi
 fi
 
+# Run cargo build
+cargo build
+
+# Run cargo test
+cargo test
+
+# Run cargo fmt
+cargo fmt --all -- --check
+
+# Run cargo clippy
+cargo clippy
+
 # Add and commit the version changes
 git add -A
 git commit -m "Bump versions"
-
-# If any of the commands above fail, exit with a non-zero status
-if [ $? -ne 0 ]; then
-    echo "Pre-push checks failed. Please fix the errors before pushing."
-    exit 1
-fi
+git push
