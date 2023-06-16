@@ -233,9 +233,13 @@ else
     echo
 
     # Compare crate versions with master and update if necessary
-    for crate in "utils" "common" "macros"; do
+    for crate in "utils" "common" "macros" "workspace"; do
         echo "Checking ${crate} version..."
-        toml="${crate}/Cargo.toml"
+        if ${crate} == "workspace"; then
+            toml="Cargo.toml"
+        else
+            toml="${crate}/Cargo.toml"
+        fi
 
         # Get the current version of the crate under [package]
         crate_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${toml}")
@@ -342,61 +346,6 @@ else
             echo
         fi
     done
-
-    echo "Checking workspace version..."
-    # Get the current version of the workspace under [package]
-    workspace_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' Cargo.toml)
-    echo "Current version: ${workspace_version}"
-
-    echo "Checking for changes in workspace..."
-    # Check if there are changes in the workspace directory since the last commit
-    if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "src/"); then
-        echo "Changes detected in workspace."
-        echo "Checking if version bump is required..."
-
-        # Get the master version of the workspace under [package]
-        master_version=$(git show "origin/master:Cargo.toml" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
-        echo "Master version: ${master_version}"
-
-        # Compare the workspace version with the master version and update if necessary
-        if version_compare_patch "$workspace_version" "$master_workspace_version" && [[ $? -le 1 ]]; then
-            echo "Version bump required. Bumping version..."
-
-            # Extract major, minor, and patch versions using regex and validate them
-            if [[ $workspace_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-                major="${BASH_REMATCH[1]}"
-                minor="${BASH_REMATCH[2]}"
-                patch="${BASH_REMATCH[3]}"
-
-                # Validate if major, minor, and patch are valid integers
-                if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
-                    echo "The version must only contain numbers. Double check the Cargo.toml file for the workspace."
-                    exit 1
-                fi 
-
-                # Increase the patch version
-                new_patch=$((patch + 1))
-                new_version="${major}.${minor}.${new_patch}"
-
-                # Update the workspace version in Cargo.toml
-                sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" Cargo.toml > temp
-                mv temp Cargo.toml
-                git add Cargo.toml
-
-                echo "Bumped workspace version to ${new_version}"
-                echo
-            else
-                echo "Invalid version number detected. Double check the Cargo.toml file for the workspace."
-                exit 1
-            fi
-        else
-            echo "No version bump required."
-            echo
-        fi
-    else
-        echo "No changes detected."
-        echo
-    fi
 
     # Commit the changes if there are modifications
     if git diff --cached --quiet; then
