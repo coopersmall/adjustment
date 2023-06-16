@@ -117,6 +117,7 @@ else
             echo "Master version: ${master_version}"
 
             # Compare the crate version with the master version and update if necessary
+            echo "Checking if version bump is required..."
             if version_compare "$crate_version" "$master_version" && [[ $? -le 1 ]]; then
                 # Extract major, minor, and patch versions using regex and validate them
                 echo "Version bump required. Bumping version..."
