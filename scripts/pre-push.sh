@@ -148,7 +148,7 @@ bump_version() {
     echo "${new_version}"
 }
 
-update_toml_file_with_new_version() {
+update_toml_with_new_version() {
      new_version="$1"
      toml_path="$2"
      crate="$3"
@@ -163,7 +163,7 @@ update_toml_file_with_new_version() {
 }
 
 # Function to validate if the only change is to the Cargo.toml file
-check_toml_file() {
+validate_toml_changes() {
     local file="$1"
 
     # Get the commit history for the branch
@@ -230,23 +230,24 @@ for crate in "${crate_names[@]}"; do
     echo "${yellow}Changes detected in ${crate}.${reset}"
     echo "Checking branch history for version changes..."
 
-    was_major_version_changed=false
-    was_minor_version_changed=false
+    is_crate_major_version_ahead=false
+    is_crate_minor_version_ahead=false
 
     is_master_major_version_ahead=false
     is_master_minor_version_ahead=false
 
     compare_versions "$crate_version" "$master_version" "major"
     if [[ $? -eq 2 ]]; then
-        was_major_version_changed=true
+        is_crate_major_version_ahead=true
     fi
+
     if [[ $? -eq 1 ]]; then
         is_master_major_version_ahead=true
     fi
 
     compare_versions "$crate_version" "$master_version" "minor"
     if [[ $? -eq 2 ]]; then
-        was_minor_version_changed=true
+        is_crate_minor_version_ahead=true
     fi 
 
     if [[ $? -eq 1 ]]; then
@@ -256,7 +257,7 @@ for crate in "${crate_names[@]}"; do
     # Compare the crate major version with the master version and update if necessary
     echo "Checking if major version was changed..."
 
-    if $was_major_version_changed; then
+    if $is_crate_major_version_ahead; then
         echo "${yellow}Major version change detected in commit history! Validating version change...${reset}"
 
         # Validate that the major version was increased only by 1
@@ -273,7 +274,7 @@ for crate in "${crate_names[@]}"; do
         fi
 
         # Validate if the only change in the commit is to the version variable in the Cargo.toml file
-        if ! check_toml_file "${toml_path}"; then
+        if ! validate_toml_changes "${toml_path}"; then
             echo "${bright_red}Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
             echo
             exit 1
@@ -288,7 +289,7 @@ for crate in "${crate_names[@]}"; do
     # Compare the crate minor version with the master version and update if necessary
     echo "Checking if minor version was changed..."
 
-    if $was_minor_version_changed; then
+    if $is_crate_minor_version_ahead; then
         echo "${yellow}Minor version change detected in commit history! Validating version change...${reset}"
 
         # Validate that the minor version was increased only by 1
@@ -304,8 +305,7 @@ for crate in "${crate_names[@]}"; do
             exit 1
         fi
 
-        # Validate if the only change in the commit is to the version variable in the Cargo.toml file
-        if ! check_toml_file "${toml_path}"; then
+        if ! validate_toml_changes "${toml_path}"; then
             echo "${bright_red}Unable to validate minor version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${crate}/Cargo.toml file.${reset}"
             echo
             exit 1
@@ -321,11 +321,8 @@ for crate in "${crate_names[@]}"; do
     if $is_master_major_version_ahead || $is_master_minor_version_ahead; then
         echo "${yellow}Master or minor version is ahead of the crate version. Rebasing patch version...${reset}"
 
-        # Bump the version
         new_version=$(bump_version "$master_version" "patch")
-
-        # Update the version in Cargo.toml file
-        update_toml_file_with_new_version ${new_version} ${toml_path} ${crate}
+        update_toml_with_new_version ${new_version} ${toml_path} ${crate}
 
         echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
         echo
@@ -334,17 +331,20 @@ for crate in "${crate_names[@]}"; do
         echo "Master branch major or minor version is not ahead of the crate version."
     fi
 
+    is_crate_patch_version_ahead=false
+
+    compare_versions "$crate_version" "$master_version" "patch"
+    if [[ $? -eq 2 ]]; then
+        is_crate_patch_version_ahead=true
+    fi
+
     # Compare the crate version with the master version and update if necessary
     echo "Checking if patch version bump is required..."
-    if compare_versions "$crate_version" "$master_version" "patch" && [[ $? -le 1 ]]; then
-        # Extract major, minor, and patch versions using regex and validate them
+    if ! $is_crate_patch_version_ahead; then
         echo "${yellow}Patch version bump required! Bumping version...${reset}"
 
-        # Bump the version
         new_version=$(bump_version "$crate_version" "patch")
-
-        # Update the version in Cargo.toml file
-        update_toml_file_with_new_version ${new_version} ${toml_path} ${crate}
+        update_toml_with_new_version ${new_version} ${toml_path} ${crate}
 
         echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
         echo
