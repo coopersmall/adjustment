@@ -237,6 +237,7 @@ for crate in "${crate_names[@]}"; do
     is_master_minor_version_ahead=false
 
     compare_versions "$crate_version" "$master_version" "major"
+    echo "Major version comparison result: $?"
     if [[ $? -eq 2 ]]; then
         was_major_version_changed=true
     elif [[ $? -eq 1 ]]; then
@@ -244,6 +245,7 @@ for crate in "${crate_names[@]}"; do
     fi
 
     compare_versions "$crate_version" "$master_version" "minor"
+    echo "Minor version comparison result: $?"
     if [[ $? -eq 2 ]]; then
         was_minor_version_changed=true
     elif [[ $? -eq 1 ]]; then
