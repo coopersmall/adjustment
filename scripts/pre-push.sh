@@ -46,7 +46,6 @@ compare_versions() {
             # The minor version is less than the master version
             return 1
         elif ((10#${v1[1]:-0} > 10#${v2[1]:-0})); then
-            echo "here"
             # The minor version is greater than the master version
             return 2
         else
@@ -230,11 +229,6 @@ for crate in "${crate_names[@]}"; do
     was_major_version_changed=false
     was_minor_version_changed=false
 
-    
-    if compare_versions "$crate_version" "$master_version" "major" && [[ $? -ne 2 ]]; then
-        echo "$?"
-    fi
-
     # Compare the crate major version with the master version and update if necessary
     echo "Checking if major version was changed..."
     if compare_versions "$crate_version" "$master_version" "major" && [[ $? -eq 2 ]]; then
@@ -258,6 +252,10 @@ for crate in "${crate_names[@]}"; do
         echo "Successfully validated major version change!"
     else
         echo "Major version change not detected in commit history."
+    fi
+
+    if compare_versions "$crate_version" "$master_version" "minor" && [[ $? -ne 2 ]]; then
+        echo "$?"
     fi
 
     # Compare the crate minor version with the master version and update if necessary
