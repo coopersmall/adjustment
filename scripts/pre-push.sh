@@ -219,17 +219,31 @@ for crate in "${crate_names[@]}"; do
     was_major_version_changed=false
     was_minor_version_changed=false
 
+    compare_versions "$crate_version" "$master_version" "major"
+    if [[ $? -eq 2 ]]; then
+        was_major_version_changed=true
+    fi
+
+    compare_versions "$crate_version" "$master_version" "minor"
+    if [[ $? -eq 2 ]]; then
+        was_minor_version_changed=true
+    fi
+
     # Compare the crate major version with the master version and update if necessary
     echo "Checking if major version was changed..."
 
-    compare_versions "$crate_version" "$master_version" "major"
-    if [[ $? -eq 2 ]]; then
+    if $was_major_version_changed; then
         echo "${yellow}Major version change detected in commit history! Validating version change...${reset}"
-        was_major_version_changed=true
 
         # Validate that the major version was increased only by 1
         if ! is_bumped_version "$crate_version" "$master_version" "major"; then
             echo "${bright_red}Unable to validate major version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${toml_path} file.${reset}"
+            echo
+            exit 1
+        fi
+
+        if ! is_new_version "$crate_version" "$master_version" "major"; then
+            echo "${bright_red}Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
             echo
             exit 1
         fi
@@ -249,15 +263,18 @@ for crate in "${crate_names[@]}"; do
     # Compare the crate minor version with the master version and update if necessary
     echo "Checking if minor version was changed..."
 
-    compare_versions "$crate_version" "$master_version" "minor"
-    if [[ $? -eq 2 ]]; then
+    if $was_minor_version_changed; then
         echo "${yellow}Minor version change detected in commit history! Validating version change...${reset}"
-        was_minor_version_changed=true
 
         # Validate that the minor version was increased only by 1
         if ! is_bumped_version "$crate_version" "$master_version" "minor"; then
-            echo "${bright_red}Minor version updates can only be done in increments of 1${reset}"
-            echo "${yellow}Double check the Cargo.toml file for ${crate}.${reset}"
+            echo "${bright_red}Minor version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
+            echo
+            exit 1
+        fi
+
+        if ! is_new_version "$crate_version" "$master_version" "major"; then
+            echo "${bright_red}Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
             echo
             exit 1
         fi
