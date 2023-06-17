@@ -29,9 +29,12 @@ compare_versions() {
         elif ((10#${v1[0]} < 10#${v2[0]})); then
             # The major version is less than the master version
             return 1
-        else
+        elif ((10#${v1[0]} > 10#${v2[0]})); then
             # The major version is greater than the master version
             return 2
+        else
+            echo "Something went wrong comparing the major versions"
+            exit 1
         fi
     fi
 
@@ -44,9 +47,12 @@ compare_versions() {
         elif ((10#${v1[1]:-0} < 10#${v2[1]:-0})); then
             # The minor version is less than the master version
             return 1
-        else
+        elif ((10#${v1[1]:-0} > 10#${v2[1]:-0})); then
             # The minor version is greater than the master version
             return 2
+        else
+            echo "Something went wrong comparing the minor versions"
+            exit 1
         fi
     fi
 
@@ -58,9 +64,13 @@ compare_versions() {
         elif ((10#${v1[2]:-0} < 10#${v2[2]:-0})); then
             # The patch version is less than the master version
             return 1
-        else
+        elif
+            ((10#${v1[2]:-0} > 10#${v2[2]:-0})); then
             # The patch version is greater than the master version
             return 2
+        else
+            echo "Something went wrong comparing the patch versions"
+            exit 1
         fi
     fi
 
