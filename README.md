@@ -1,4 +1,19 @@
 ## Getting Started
+### Add dependencies
+```sh
+make deps
+```
+
+### Add developer dependencies
+```sh
+make deps=dev
+```
+
+### Build the app
+```sh
+make build
+```
+
 ### Start the app
 ```sh
 make start
@@ -29,6 +44,7 @@ make test
 
 
   Here's an diagram explaining the flow
+
 ```mermaid
 graph TD
     A[Start] --> B[Pull latest changes from origin]
