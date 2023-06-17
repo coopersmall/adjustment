@@ -210,6 +210,10 @@ for crate in "${crate_names[@]}"; do
     crate_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${toml_path}")
     echo "Current version: ${yellow}${crate_version}${reset}"
 
+   # Get the master version of the crate under [package]
+    master_version=$(git show "origin/master:${toml_path}" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
+    echo "Master version: ${yellow}${master_version}${reset}"
+
     # Check if there are changes in the crate directory since the last commit
     echo "Checking for changes in ${crate}..."
 
@@ -221,10 +225,6 @@ for crate in "${crate_names[@]}"; do
 
     echo "${yellow}Changes detected in ${crate}.${reset}"
     echo "Checking if version bump is required..."
-
-    # Get the master version of the crate under [package]
-    master_version=$(git show "origin/master:${toml_path}" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
-    echo "Master version: ${yellow}${master_version}${reset}"
 
     was_major_version_changed=false
     was_minor_version_changed=false
