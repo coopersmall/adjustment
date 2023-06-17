@@ -349,16 +349,16 @@ for crate in "${crate_names[@]}"; do
         echo "Master branch major or minor version is not ahead of the crate version."
     fi
 
-    is_crate_patch_version_ahead=false
+    requires_patch=false
 
     compare_versions "$crate_version" "$master_version" "patch"
-    if [[ $? -eq 2 ]]; then
-        is_crate_patch_version_ahead=true
+    if [[ $? -le 1 ]]; then
+        requires_patch=true
     fi
 
     # Compare the crate version with the master version and update if necessary
     echo "Checking if patch version bump is required..."
-    if ! $is_crate_patch_version_ahead; then
+    if ! $requires_patch; then
         echo "${yellow}Patch version bump required! Bumping version...${reset}"
 
         new_version=$(bump_version "$crate_version" "patch")
