@@ -253,7 +253,7 @@ else
 
         # Get the current version of the crate under [package]
         crate_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${toml_path}")
-        echo "Current version: ${light_green}${crate_version}${reset}"
+        echo "Current version: ${yellow}${crate_version}${reset}"
 
         # Check if there are changes in the crate directory since the last commit
         echo "Checking for changes in ${crate}..."
@@ -263,7 +263,7 @@ else
 
             # Get the master version of the crate under [package]
             master_version=$(git show "origin/master:${toml_path}" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
-            echo "Master version: ${light_green}${master_version}${reset}"
+            echo "Master version: ${yellow}${master_version}${reset}"
 
             was_major_version_changed=false
             was_minor_version_changed=false
