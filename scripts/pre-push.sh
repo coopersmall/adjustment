@@ -206,11 +206,12 @@ for crate in "${crate_names[@]}"; do
     echo "Checking for changes in ${crate}..."
 
     # If there are no changes in the crate directory, skip to the next crate
-    if ! git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${src_path}"; then
+    if ! output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${src_path}"); then
         echo "${yellow}No changes detected in ${crate}.${reset}"
         continue
     fi
 
+    echo
     echo "${yellow}Changes detected in ${crate}.${reset}"
     echo "Checking if version bump is required..."
 
@@ -223,6 +224,7 @@ for crate in "${crate_names[@]}"; do
 
     # Compare the crate major version with the master version and update if necessary
     if compare_major_versions "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
+        echo
         echo "${yellow}Major version change detected in commit history. Validating version change...${reset}"
         was_major_version_changed=true
 
@@ -245,6 +247,7 @@ for crate in "${crate_names[@]}"; do
 
     # Compare the crate minor version with the master version and update if necessary
     if compare_minor_version "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
+        echo
         echo "${yellow}Minor version change detected in commit history. Validating version change...${reset}"
         was_minor_version_changed=true
 
@@ -268,6 +271,7 @@ for crate in "${crate_names[@]}"; do
     # Compare the crate version with the master version and update if necessary
     if compare_patch_versions "$crate_version" "$master_version" && [[ $? -le 1 ]] && ! $was_major_version_changed && ! $was_minor_version_changed; then
         # Extract major, minor, and patch versions using regex and validate them
+        echo
         echo "${yellow}Version bump required. Bumping version...${reset}"
 
         # Bump the version
@@ -277,9 +281,7 @@ for crate in "${crate_names[@]}"; do
         sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${toml_path}" > temp
         mv temp "${toml_path}"
 
-        # Commit the changes
         git add "${toml_path}"
-        git commit -m "bump ${crate} version to ${new_version}"
 
         echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
         echo
@@ -288,6 +290,16 @@ for crate in "${crate_names[@]}"; do
         echo
     fi
 done
+
+# Commit the changes if there are modifications
+if git diff --cached --quiet; then
+    echo "No version changes detected. Nothing to commit."
+else
+    echo "Committing version changes..."
+    git commit -m "bump versions"
+    version_commit_sha=$(git rev-parse HEAD)
+    echo "${light_green}Version changes commited.${reset}"
+fi
 
 # Run cargo build
 cargo build
