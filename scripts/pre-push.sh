@@ -311,6 +311,9 @@ for crate in "${crate_names[@]}"; do
     else
         echo "Minor version change not detected in commit history."
     fi
+    
+    echo $is_master_major_version_ahead
+    echo $is_master_minor_version_ahead
 
     if $is_master_major_version_ahead || $is_master_minor_version_ahead; then
         echo "${yellow}Master or minor version is ahead of the crate version. Rebasing patch version...${reset}"
