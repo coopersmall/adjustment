@@ -243,7 +243,7 @@ for crate in "${crate_names[@]}"; do
         fi
 
         if ! is_new_version "$crate_version" "$master_version" "major"; then
-            echo "${bright_red}Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
+            echo "${bright_red}Major version updates can only be made to fresh versions (for example 1.2.0 -> 2.0.0)${reset}"
             echo
             exit 1
         fi
@@ -273,8 +273,8 @@ for crate in "${crate_names[@]}"; do
             exit 1
         fi
 
-        if ! is_new_version "$crate_version" "$master_version" "major"; then
-            echo "${bright_red}Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
+        if ! is_new_version "$crate_version" "$master_version" "minor"; then
+            echo "${bright_red}Minor version updates can only be done to a fresh version (for example 1.2.3 -> 1.3.0)${reset}"
             echo
             exit 1
         fi
