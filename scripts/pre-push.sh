@@ -229,6 +229,11 @@ for crate in "${crate_names[@]}"; do
     was_major_version_changed=false
     was_minor_version_changed=false
 
+    
+    if compare_versions "$crate_version" "$master_version" "major" && [[ $? -ne 2 ]]; then
+        echo "$?"
+    fi
+
     # Compare the crate major version with the master version and update if necessary
     echo "Checking if major version was changed..."
     if compare_versions "$crate_version" "$master_version" "major" && [[ $? -eq 2 ]]; then
