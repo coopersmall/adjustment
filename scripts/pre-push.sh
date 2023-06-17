@@ -39,8 +39,6 @@ compare_versions() {
     fi
 
     if [[ $version_type = "minor" ]]; then
-        echo $((10#${v1[1]:-0}))
-        echo $((10#${v2[1]:-0}))
         if ((10#${v1[1]:-0} == 10#${v2[1]:-0})); then
             # The minor version is the same as master
             return 0
@@ -258,6 +256,7 @@ for crate in "${crate_names[@]}"; do
 
     # Compare the crate minor version with the master version and update if necessary
     echo "Checking if minor version was changed..."
+    echo "$(compare_versions "$crate_version" "$master_version" "minor")"
     if compare_versions "$crate_version" "$master_version" "minor" && [[ $? -eq 2 ]]; then
         echo "${yellow}Minor version change detected in commit history! Validating version change...${reset}"
         was_minor_version_changed=true
