@@ -35,19 +35,16 @@ compare_versions() {
         fi
     fi
 
-    if [[ $version_type = "minor" ]]; then
-        # Compare the minor version with master
-        if ((10#${v1[1]:-0} == 10#${v2[1]:-0})); then
-            # The minor version is the same as master
-            return 0
-        elif ((10#${v1[1]:-0} < 10#${v2[1]:-0})); then
-            # The minor version is less than the master version
-            return 1
-        else
-            # The minor version is greater than the master version
-            return 2
-        fi
-    fi
+    if [[ ${v1[1]:-0} == ${v2[1]:-0} ]]; then
+        # The minor version is the same as master
+        return 0
+    elif [[ ${v1[1]:-0} < ${v2[1]:-0} ]]; then
+        # The minor version is less than the master version
+        return 1
+    else
+        # The minor version is greater than the master version
+        return 2
+    fi 
 
     if [[ $version_type = "patch" ]]; then
         # Compare the patch version with master
