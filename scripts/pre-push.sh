@@ -264,7 +264,7 @@ for crate in "${crate_names[@]}"; do
 
         # Validate that the minor version was increased only by 1
         if ! was_version_bumped "$crate_version" "$master_version" "minor"; then
-            echo "${bright_red}Minor version updates can only be done in increments of 1. Major version: ${bright_green}${major_version}${reset}, ${crate} version: ${yellow}${crate_version}${reset}Double check the Cargo.toml file for ${crate}.${reset}"
+            echo "${bright_red}Minor version updates can only be done in increments of 1. Major version: ${light_green}${major_version}${reset}, ${crate} version: ${yellow}${crate_version}${reset}. Double check the Cargo.toml file for ${crate}.${reset}"
             echo
             exit 1
         fi
