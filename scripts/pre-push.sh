@@ -195,7 +195,10 @@ is_first_push() {
     fi
 }
 
+echo "Pulling latest changes from origin..."
+git pull origin master
 echo
+
 echo "${yellow}Checking for version changes...${reset}"
 echo
 
