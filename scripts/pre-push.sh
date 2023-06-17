@@ -283,6 +283,7 @@ for crate in "${crate_names[@]}"; do
     # Compare the crate version with the master version and update if necessary
     # If the major or minor version was changed, then the patch version is not checked
     echo "Checking if patch bump is required..."
+    echo "$(compare_versions "$crate_version" "$master_version" "patch")"
     if compare_versions "$crate_version" "$master_version" "patch" && [[ $? -le 1 ]] && ! $was_major_version_changed && ! $was_minor_version_changed; then
         # Extract major, minor, and patch versions using regex and validate them
         echo "${yellow}Patch bump required! Bumping version...${reset}"
