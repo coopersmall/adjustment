@@ -27,6 +27,7 @@ make test
   - If the major or minor version in the master branch is ahead of the crate version, it rebases and bumps the patch version.
   - If the master patch version is ahead of the current batch version, it bumps the patch version
 
+
   Here's an diagram explaining the flow
 ```mermaid
 graph TD
