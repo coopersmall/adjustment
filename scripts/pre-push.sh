@@ -127,14 +127,12 @@ bump_version() {
         minor="${BASH_REMATCH[2]}"
         patch="${BASH_REMATCH[3]}"
     else
-        clear
         echo "${bright_red}The version must be in the format of major.minor.patch. Double check the Cargo.toml.${reset}"
         exit 1
     fi
 
     # Validate if major, minor, and patch are valid integers
     if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
-        clear
         echo "${bright_red}The version must only contain numbers. Double check the Cargo.toml file.${reset}"
         exit 1
     fi
@@ -231,20 +229,20 @@ for crate in "${crate_names[@]}"; do
 
     # Compare the crate major version with the master version and update if necessary
     echo "Checking if major version was changed..."
-    if compare_versions "$crate_version" "$master_version" "major" && [[ $? -eq 2 ]]; then
+
+    compare_versions "$crate_version" "$master_version" "major"
+    if [[ $? -eq 2 ]]; then
         echo "${yellow}Major version change detected in commit history! Validating version change...${reset}"
         was_major_version_changed=true
 
         # Validate that the major version was increased only by 1
         if ! was_version_bumped "$crate_version" "$master_version" "major"; then
-            clear
             echo "${bright_red}Unable to validate major version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${toml_path} file.${reset}"
             exit 1
         fi
 
         # Validate if the only change in the commit is to the version variable in the Cargo.toml file
         if ! check_toml_file "${toml_path}"; then
-            clear
             echo "${bright_red}Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
             exit 1
         fi
@@ -264,14 +262,12 @@ for crate in "${crate_names[@]}"; do
 
         # Validate that the minor version was increased only by 1
         if ! was_version_bumped "$crate_version" "$master_version" "minor"; then
-            clear
             echo "${bright_red}Minor version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
             exit 1
         fi
 
         # Validate if the only change in the commit is to the version variable in the Cargo.toml file
         if ! check_toml_file "${toml_path}"; then
-            clear
             echo "${bright_red}Unable to validate minor version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${crate}/Cargo.toml file.${reset}"
             exit 1
         fi
