@@ -239,7 +239,9 @@ for crate in "${crate_names[@]}"; do
             exit 1
         fi
 
-            echo "Successfully validated major version change!"
+        echo "Successfully validated major version change!"
+    else
+        echo "${light_green}Major version change not detected in commit history.${reset}"
     fi
 
     # Compare the crate minor version with the master version and update if necessary
@@ -262,7 +264,9 @@ for crate in "${crate_names[@]}"; do
             exit 1
         fi
 
-            echo "${light_green}Successfully validated minor version change!${reset}"
+        echo "${light_green}Successfully validated minor version change!${reset}"
+    else
+        echo "${light_green}Minor version change not detected in commit history.${reset}"
     fi
 
     # Compare the crate version with the master version and update if necessary
