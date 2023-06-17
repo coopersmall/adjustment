@@ -46,7 +46,6 @@ compare_versions() {
             # The minor version is less than the master version
             return 1
         elif ((10#${v1[1]:-0} > 10#${v2[1]:-0})); then
-            echo "The minor version is greater than the master version"
             # The minor version is greater than the master version
             return 2
         else
