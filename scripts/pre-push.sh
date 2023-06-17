@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Set color variables
+purple_light=$(tput setaf 147)
+purple_dark=$(tput setaf 99)
+light_green=$(tput setaf 76)
+blue=$(tput setaf 39)
+yellow=$(tput setaf 228)
+bright_red=$(tput setaf 196)
+reset=$(tput sgr0)
+
 # Function to check if a command is available
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -229,12 +238,13 @@ if [ "$first_push" = true ]; then
         git commit -m "Bump versions"
     fi
 else
-    echo "Checking for version changes..."
+    echo "${purple_dark}Checking for version changes...${reset}"
     echo
 
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros" "workspace"; do
-        echo "Checking ${crate} version..."
+        echo "${purple_light}Checking ${crate} version...${reset}"
+
         if [ "${crate}" = "workspace" ]; then
             toml_path="Cargo.toml"
         else
@@ -243,30 +253,30 @@ else
 
         # Get the current version of the crate under [package]
         crate_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${toml_path}")
-        echo "Current version: ${crate_version}"
+        echo "Current version: ${yellow}${crate_version}${reset}"
 
         # Check if there are changes in the crate directory since the last commit
         echo "Checking for changes in ${crate}..."
         if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
-            echo "Changes detected in ${crate}."
+            echo "Changes detected in ${purple_light}${crate}${reset}."
             echo "Checking if version bump is required..."
 
             # Get the master version of the crate under [package]
             master_version=$(git show "origin/master:${toml_path}" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
-            echo "Master version: ${master_version}"
+            echo "Master version: ${purple_light}${master_version}${reset}"
 
             was_major_version_changed=false
             was_minor_version_changed=false
 
             # Compare the crate major version with the master version and update if necessary
             if version_compare_major "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
-                echo "Major version change detected in commit history. Validating version change..."
+                echo "${yellow}Major version change detected in commit history. Validating version change...${reset}"
                 was_major_version_changed=true
 
                 # Validate that the major version was increase only by 1
                 if ! validate_major_version "$crate_version" "$master_version"; then
                     echo
-                    echo "Unable to validate major version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${toml_path} file."
+                    echo "${bright_red}Unable to validate major version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${toml_path} file.${reset}"
                     exit 1
                 fi
 
@@ -275,29 +285,29 @@ else
                     echo "Successfully validated major version change!"
                 else
                     echo
-                    echo "Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}."
+                    echo "${bright_red}Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
                     exit 1
                 fi
             fi 
 
             # Compare the crate minor version with the master version and update if necessary
             if version_compare_minor "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
-                echo "Minor version change detected in commit history. Validating version change..."
+                echo "${yellow}Minor version change detected in commit history. Validating version change...${reset}"
                 was_minor_version_changed=true
 
                 # Validate that the minor version was increase only by 1
                 if ! validate_minor_version "$crate_version" "$master_version"; then
                     echo
-                    echo "Minor version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}."
+                    echo "${bright_red}Minor version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
                     exit 1
                 fi
 
                 # Validate if the only change in the commit is to the version variable in the Cargo.toml file
                 if validate_cargo_toml_change "${toml_path}"; then
-                    echo "Successfully validated minor version change!"
+                    echo "${light_green}Successfully validated minor version change!${reset}"
                 else
                     echo
-                    echo "Unable to validate minor version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${crate}/Cargo.toml file."
+                    echo "${bright_red}Unable to validate minor version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${crate}/Cargo.toml file.${reset}"
                     exit 1
                 fi
             fi
@@ -316,14 +326,14 @@ else
                     patch="${BASH_REMATCH[3]}"
                 else
                     echo
-                    echo "The version must be in the format of major.minor.patch. Double check the Cargo.toml file for ${crate}."
+                    echo "${bright_red}The version must be in the format of major.minor.patch. Double check the Cargo.toml file for ${crate}.${reset}"
                     exit 1
                 fi
 
                  # Validate if major, minor, and patch are valid integers
                 if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
                     echo
-                    echo "The version must only contain numbers. Double check the Cargo.toml file for ${crate}."
+                    echo "${bright_red}The version must only contain numbers. Double check the Cargo.toml file for ${crate}.${reset}"
                     exit 1
                 fi
 
@@ -335,7 +345,7 @@ else
                 mv temp "${toml_path}"
                 git add "${toml_path}"
 
-                echo "Bumped ${crate} version to ${new_version}"
+                echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
                 echo
             else
                 echo "No version bump required."
@@ -354,7 +364,7 @@ else
         echo "Committing version changes..."
         git commit -m "bump versions"
         version_commit_sha=$(git rev-parse HEAD)
-        echo "Version changes commited. Name: bump version SHA: ${version_commit_sha}"
+        echo "${light_green}Version changes commited.${reset}"
     fi
 fi
 
