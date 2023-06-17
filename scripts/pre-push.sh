@@ -349,9 +349,11 @@ for crate in "${crate_names[@]}"; do
         echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
         echo
         continue
+    else
+        echo "Patch version bump not required."
     fi
 
-    echo "${light_green}No version changes made. ${reset}"
+    echo "${light_green}No version changes made.${reset}"
     echo
 done
 
