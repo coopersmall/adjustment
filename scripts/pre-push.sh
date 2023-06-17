@@ -222,7 +222,7 @@ for crate in "${crate_names[@]}"; do
     fi
 
     echo "${yellow}Changes detected in ${crate}.${reset}"
-    echo "Checking if version bump is required..."
+    echo "Checking branch history for version changes..."
 
     was_major_version_changed=false
     was_minor_version_changed=false
@@ -264,7 +264,9 @@ for crate in "${crate_names[@]}"; do
 
         # Validate that the minor version was increased only by 1
         if ! was_version_bumped "$crate_version" "$master_version" "minor"; then
-            echo "${bright_red}Minor version updates can only be done in increments of 1. Master version: ${yellow}${master_version}${reset}, Branch version: ${yellow}${crate_version}${reset}. Double check the Cargo.toml file for ${crate}.${reset}"
+            echo "${bright_red}Minor version updates can only be done in increments of 1"
+            echo "Master version: ${yellow}${master_version}${reset}, Branch version: ${bright_red}${crate_version}${reset}"
+            echo "Double check the Cargo.toml file for ${crate}.${reset}"
             echo
             exit 1
         fi
