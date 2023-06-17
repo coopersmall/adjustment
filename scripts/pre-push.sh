@@ -36,6 +36,8 @@ compare_versions() {
     fi
 
     if [[ $version_type = "minor" ]]; then
+        echo $(10#${v1[1]:-0})
+        echo $(10#${v2[1]:-0})
         if ((10#${v1[1]:-0} == 10#${v2[1]:-0})); then
             # The minor version is the same as master
             return 0
@@ -241,7 +243,7 @@ for crate in "${crate_names[@]}"; do
 
         echo "Successfully validated major version change!"
     else
-        echo "${light_green}Major version change not detected in commit history.${reset}"
+        echo "Major version change not detected in commit history."
     fi
 
     # Compare the crate minor version with the master version and update if necessary
@@ -266,7 +268,7 @@ for crate in "${crate_names[@]}"; do
 
         echo "${light_green}Successfully validated minor version change!${reset}"
     else
-        echo "${light_green}Minor version change not detected in commit history.${reset}"
+        echo "Minor version change not detected in commit history."
     fi
 
     # Compare the crate version with the master version and update if necessary
