@@ -195,6 +195,7 @@ is_first_push() {
     fi
 }
 
+echo
 echo "${yellow}Checking for version changes...${reset}"
 echo
 
