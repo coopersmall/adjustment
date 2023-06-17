@@ -111,7 +111,7 @@ was_minor_version_increased_by_one() {
 }
 
 # Function to validate if the only change is to the Cargo.toml file
-was_only_cargo_toml_changed() {
+was_cargo_toml_only_change() {
     local file="$1"
 
     # Get the commit history for the branch
@@ -206,7 +206,7 @@ for crate in "${crate_names[@]}"; do
     # Check if there are changes in the crate directory since the last commit
     echo "Checking for changes in ${crate}..."
 
-    # If there are no changes in the crate directory, skip to the next crate
+    # If there are no changes in the crate directory compared to master, skip to the next crate
     if ! output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${src_path}") && [ -n "$output" ]; then
         echo "${yellow}No changes detected in ${crate}.${reset}"
         continue
@@ -223,6 +223,8 @@ for crate in "${crate_names[@]}"; do
     was_major_version_changed=false
     was_minor_version_changed=false
 
+    echo "$(compare_major_versions "$crate_version" "$master_version")"
+
     # Compare the crate major version with the master version and update if necessary
     if compare_major_versions "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
         echo "${yellow}Major version change detected in commit history. Validating version change...${reset}"
@@ -236,7 +238,7 @@ for crate in "${crate_names[@]}"; do
         fi
 
         # Validate if the only change in the commit is to the version variable in the Cargo.toml file
-        if was_only_cargo_toml_changed "${toml_path}"; then
+        if was_cargo_toml_only_change "${toml_path}"; then
             echo "Successfully validated major version change!"
         else
             echo
@@ -258,7 +260,7 @@ for crate in "${crate_names[@]}"; do
         fi
 
         # Validate if the only change in the commit is to the version variable in the Cargo.toml file
-        if was_only_cargo_toml_changed "${toml_path}"; then
+        if was_cargo_toml_only_change "${toml_path}"; then
             echo "${light_green}Successfully validated minor version change!${reset}"
         else
             echo
@@ -268,6 +270,7 @@ for crate in "${crate_names[@]}"; do
     fi
 
     # Compare the crate version with the master version and update if necessary
+    # If the major or minor version was changed, then the patch version is not checked
     if compare_patch_versions "$crate_version" "$master_version" && [[ $? -le 1 ]] && ! $was_major_version_changed && ! $was_minor_version_changed; then
         # Extract major, minor, and patch versions using regex and validate them
         echo "${yellow}Version bump required. Bumping version...${reset}"
@@ -275,7 +278,7 @@ for crate in "${crate_names[@]}"; do
         # Bump the version
         new_version=$(bump_version "$crate_version" "patch")
 
-        # Update the version in Cargo.toml
+        # Update the version in Cargo.toml file
         sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${toml_path}" > temp
         mv temp "${toml_path}"
 
