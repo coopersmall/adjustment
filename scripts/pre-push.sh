@@ -250,14 +250,19 @@ else
         else
             toml_path="${crate}/Cargo.toml"
         fi
-
+        if [ "${crate}" = "workspace" ]; then
+            crate_src="src/"
+        else
+            crate_src="${crate}/src/"
+        fi
+        
         # Get the current version of the crate under [package]
         crate_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${toml_path}")
         echo "Current version: ${yellow}${crate_version}${reset}"
 
         # Check if there are changes in the crate directory since the last commit
         echo "Checking for changes in ${crate}..."
-        if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
+        if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate_src}"); then
             echo "${yellow}Changes detected in ${crate}.${reset}"
             echo "Checking if version bump is required..."
 
