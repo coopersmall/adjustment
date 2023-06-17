@@ -238,12 +238,12 @@ if [ "$first_push" = true ]; then
         git commit -m "Bump versions"
     fi
 else
-    echo "${purple_dark}Checking for version changes...${reset}"
+    echo "${yellow}Checking for version changes...${reset}"
     echo
 
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros" "workspace"; do
-        echo "${purple_light}Checking ${crate} version...${reset}"
+        echo "${yellow}Checking ${crate} version...${reset}"
 
         if [ "${crate}" = "workspace" ]; then
             toml_path="Cargo.toml"
@@ -258,12 +258,12 @@ else
         # Check if there are changes in the crate directory since the last commit
         echo "Checking for changes in ${crate}..."
         if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate}/"); then
-            echo "Changes detected in ${purple_light}${crate}${reset}."
+            echo "${yellow}Changes detected in ${crate}.${reset}"
             echo "Checking if version bump is required..."
 
             # Get the master version of the crate under [package]
             master_version=$(git show "origin/master:${toml_path}" | awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }')
-            echo "Master version: ${purple_light}${master_version}${reset}"
+            echo "Master version: ${light_green}${master_version}${reset}"
 
             was_major_version_changed=false
             was_minor_version_changed=false
@@ -318,7 +318,7 @@ else
                 ! was_minor_version_changed; then
 
                 # Extract major, minor, and patch versions using regex and validate them
-                echo "Version bump required. Bumping version..."
+                echo "${yellow}Version bump required. Bumping version...${reset}"
 
                 if [[ $crate_version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
                     major="${BASH_REMATCH[1]}"
