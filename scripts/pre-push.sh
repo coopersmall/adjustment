@@ -317,7 +317,7 @@ for crate in "${crate_names[@]}"; do
         echo "Minor version change not detected in commit history."
     fi
     
-    echo "Checking if master or minor version is ahead of the crate version..."
+    echo "Checking if master branch major or minor version is ahead of the crate version..."
     if $is_master_major_version_ahead || $is_master_minor_version_ahead; then
         echo "${yellow}Master or minor version is ahead of the crate version. Rebasing patch version...${reset}"
 
@@ -330,6 +330,8 @@ for crate in "${crate_names[@]}"; do
         echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
         echo
         continue
+    else
+        echo "Master branch major or minor version is not ahead of the crate version."
     fi
 
     # Compare the crate version with the master version and update if necessary
@@ -349,7 +351,7 @@ for crate in "${crate_names[@]}"; do
         continue
     fi
 
-    echo "${light_green}No version bump required.${reset}"
+    echo "${light_green}No version changes made. ${reset}"
     echo
 done
 
