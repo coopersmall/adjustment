@@ -148,6 +148,20 @@ bump_version() {
     echo "${new_version}"
 }
 
+update_toml_file_with_new_version() {
+     new_version="$1"
+     toml_path="$2"
+     crate="$3"
+
+     # Update the version in Cargo.toml file
+     sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${toml_path}" > temp
+     mv temp "${toml_path}"
+
+     # Commit the changes
+     git add "${toml_path}"
+     git commit -m "bump ${crate} version to ${new_version}"
+}
+
 # Function to validate if the only change is to the Cargo.toml file
 check_toml_file() {
     local file="$1"
@@ -163,7 +177,7 @@ check_toml_file() {
         # Get the file changes in the commit
         changed_files=$(git diff --name-only "${commits[0]}")
 
-       # Check if the only changed file is the Cargo.toml for the given crate,
+       # Check if the only changed file is the Cargo.toml for the given crate, and if the version is set in the file under the [package] section
        if [[ $changed_files == "${file}" ]] && [[ $(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${file}") ]]; then
            return 0
        fi 
@@ -219,14 +233,21 @@ for crate in "${crate_names[@]}"; do
     was_major_version_changed=false
     was_minor_version_changed=false
 
+    is_master_major_version_ahead=false
+    is_master_minor_version_ahead=false
+
     compare_versions "$crate_version" "$master_version" "major"
     if [[ $? -eq 2 ]]; then
         was_major_version_changed=true
+    elif [[ $? -eq 1 ]]; then
+        is_master_major_version_ahead=true
     fi
 
     compare_versions "$crate_version" "$master_version" "minor"
     if [[ $? -eq 2 ]]; then
         was_minor_version_changed=true
+    elif [[ $? -eq 1 ]]; then
+        is_master_minor_version_ahead=true
     fi
 
     # Compare the crate major version with the master version and update if necessary
@@ -291,6 +312,20 @@ for crate in "${crate_names[@]}"; do
         echo "Minor version change not detected in commit history."
     fi
 
+    if is_master_major_version_ahead || is_master_minor_version_ahead; then
+        echo "${yellow}Master or minor version is ahead of the crate version. Rebasing patch version...${reset}"
+
+        # Bump the version
+        new_version=$(bump_version "$master_version" "patch")
+
+        # Update the version in Cargo.toml file
+        update_toml_file_with_new_version ${new_version} ${toml_path} ${crate}
+
+        echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
+        echo
+        continue
+    fi
+
     # Compare the crate version with the master version and update if necessary
     # If the major or minor version was changed, then the patch version is not checked
     echo "Checking if patch bump is required..."
@@ -302,12 +337,7 @@ for crate in "${crate_names[@]}"; do
         new_version=$(bump_version "$crate_version" "patch")
 
         # Update the version in Cargo.toml file
-        sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${toml_path}" > temp
-        mv temp "${toml_path}"
-
-        # Commit the changes
-        git add "${toml_path}"
-        git commit -m "bump ${crate} version to ${new_version}"
+        update_toml_file_with_new_version ${new_version} ${toml_path} ${crate}
 
         echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
         echo
