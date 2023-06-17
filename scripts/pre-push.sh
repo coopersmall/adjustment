@@ -280,6 +280,7 @@ for crate in "${crate_names[@]}"; do
         fi
 
         echo "Successfully validated major version change!"
+        continue
     else
         echo "Major version change not detected in commit history."
     fi
@@ -311,13 +312,12 @@ for crate in "${crate_names[@]}"; do
         fi
 
         echo "${light_green}Successfully validated minor version change!${reset}"
+        continue
     else
         echo "Minor version change not detected in commit history."
     fi
     
-    echo $is_master_major_version_ahead
-    echo $is_master_minor_version_ahead
-
+    echo "Checking if master or minor version is ahead of the crate version..."
     if $is_master_major_version_ahead || $is_master_minor_version_ahead; then
         echo "${yellow}Master or minor version is ahead of the crate version. Rebasing patch version...${reset}"
 
@@ -333,11 +333,10 @@ for crate in "${crate_names[@]}"; do
     fi
 
     # Compare the crate version with the master version and update if necessary
-    # If the major or minor version was changed, then the patch version is not checked
-    echo "Checking if patch bump is required..."
-    if compare_versions "$crate_version" "$master_version" "patch" && [[ $? -le 1 ]] && ! $was_major_version_changed && ! $was_minor_version_changed; then
+    echo "Checking if patch version bump is required..."
+    if compare_versions "$crate_version" "$master_version" "patch" && [[ $? -le 1 ]]; then
         # Extract major, minor, and patch versions using regex and validate them
-        echo "${yellow}Patch bump required! Bumping version...${reset}"
+        echo "${yellow}Patch version bump required! Bumping version...${reset}"
 
         # Bump the version
         new_version=$(bump_version "$crate_version" "patch")
@@ -347,10 +346,11 @@ for crate in "${crate_names[@]}"; do
 
         echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
         echo
-    else
-        echo "${light_green}No version bump required.${reset}"
-        echo
+        continue
     fi
+
+    echo "${light_green}No version bump required.${reset}"
+    echo
 done
 
 # Run cargo build
