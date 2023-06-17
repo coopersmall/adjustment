@@ -228,7 +228,6 @@ for crate in "${crate_names[@]}"; do
     fi
 
     echo "${yellow}Changes detected in ${crate}.${reset}"
-    echo "Checking branch history for version changes..."
 
     is_crate_major_version_ahead=false
     is_crate_minor_version_ahead=false
