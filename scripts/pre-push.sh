@@ -247,13 +247,10 @@ else
 
         if [ "${crate}" = "workspace" ]; then
             toml_path="Cargo.toml"
+            src_path="src/"
         else
             toml_path="${crate}/Cargo.toml"
-        fi
-        if [ "${crate}" = "workspace" ]; then
-            crate_src="src/"
-        else
-            crate_src="${crate}/src/"
+            src_path="${crate}/src/"
         fi
         
         # Get the current version of the crate under [package]
@@ -262,7 +259,7 @@ else
 
         # Check if there are changes in the crate directory since the last commit
         echo "Checking for changes in ${crate}..."
-        if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${crate_src}"); then
+        if output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${src_path}"); then
             echo "${yellow}Changes detected in ${crate}.${reset}"
             echo "Checking if version bump is required..."
 
