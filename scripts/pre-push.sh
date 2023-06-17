@@ -46,6 +46,7 @@ compare_versions() {
             # The minor version is less than the master version
             return 1
         elif ((10#${v1[1]:-0} > 10#${v2[1]:-0})); then
+            echo "The minor version is greater than the master version"
             # The minor version is greater than the master version
             return 2
         else
@@ -256,7 +257,6 @@ for crate in "${crate_names[@]}"; do
 
     # Compare the crate minor version with the master version and update if necessary
     echo "Checking if minor version was changed..."
-    echo "$(compare_versions "$crate_version" "$master_version" "minor")"
     if compare_versions "$crate_version" "$master_version" "minor" && [[ $? -eq 2 ]]; then
         echo "${yellow}Minor version change detected in commit history! Validating version change...${reset}"
         was_minor_version_changed=true
@@ -283,7 +283,6 @@ for crate in "${crate_names[@]}"; do
     # Compare the crate version with the master version and update if necessary
     # If the major or minor version was changed, then the patch version is not checked
     echo "Checking if patch bump is required..."
-    echo "$(compare_versions "$crate_version" "$master_version" "patch")"
     if compare_versions "$crate_version" "$master_version" "patch" && [[ $? -le 1 ]] && ! $was_major_version_changed && ! $was_minor_version_changed; then
         # Extract major, minor, and patch versions using regex and validate them
         echo "${yellow}Patch bump required! Bumping version...${reset}"
