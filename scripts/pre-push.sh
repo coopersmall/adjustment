@@ -35,16 +35,18 @@ compare_versions() {
         fi
     fi
 
-    if [[ ${v1[1]:-0} == ${v2[1]:-0} ]]; then
-        # The minor version is the same as master
-        return 0
-    elif [[ ${v1[1]:-0} < ${v2[1]:-0} ]]; then
-        # The minor version is less than the master version
-        return 1
-    else
-        # The minor version is greater than the master version
-        return 2
-    fi 
+    if [[ $version_type = "minor" ]]; then
+        if ((10#${v1[1]:-0} == 10#${v2[1]:-0})); then
+            # The minor version is the same as master
+            return 0
+        elif ((10#${v1[1]:-0} < 10#${v2[1]:-0})); then
+            # The minor version is less than the master version
+            return 1
+        else
+            # The minor version is greater than the master version
+            return 2
+        fi
+    fi
 
     if [[ $version_type = "patch" ]]; then
         # Compare the patch version with master
@@ -60,6 +62,7 @@ compare_versions() {
         fi
     fi
 
+    clear
     echo "Invalid version type: ${version_type}"
     exit 1
 }
@@ -98,6 +101,10 @@ was_version_bumped() {
             return 1
         fi
     fi
+
+    clear
+    echo "Invalid version type: ${version_type}"
+    exit 1
 }
 
 bump_version() {
@@ -110,14 +117,14 @@ bump_version() {
         minor="${BASH_REMATCH[2]}"
         patch="${BASH_REMATCH[3]}"
     else
-        echo
+        clear
         echo "${bright_red}The version must be in the format of major.minor.patch. Double check the Cargo.toml.${reset}"
         exit 1
     fi
 
     # Validate if major, minor, and patch are valid integers
     if ! [[ $major =~ ^[0-9]+$ && $minor =~ ^[0-9]+$ && $patch =~ ^[0-9]+$ ]]; then
-        echo
+        clear
         echo "${bright_red}The version must only contain numbers. Double check the Cargo.toml file.${reset}"
         exit 1
     fi
@@ -133,7 +140,7 @@ bump_version() {
         new_patch=$((patch + 1))
         new_version="${major}.${minor}.${new_patch}"
     else
-        echo
+        clear
         echo "Invalid version type: ${version_type}"
         exit 1
     fi
@@ -203,7 +210,6 @@ for crate in "${crate_names[@]}"; do
     fi
 
     echo "${yellow}Changes detected in ${crate}.${reset}"
-    echo
     echo "Checking if version bump is required..."
 
     # Get the master version of the crate under [package]
@@ -214,20 +220,21 @@ for crate in "${crate_names[@]}"; do
     was_minor_version_changed=false
 
     # Compare the crate major version with the master version and update if necessary
+    echo "Checking if major version was changed..."
     if compare_versions "$crate_version" "$master_version" "major" && [[ $? -eq 2 ]]; then
-        echo "${yellow}Major version change detected in commit history. Validating version change...${reset}"
+        echo "${yellow}Major version change detected in commit history! Validating version change...${reset}"
         was_major_version_changed=true
 
         # Validate that the major version was increased only by 1
         if ! was_version_bumped "$crate_version" "$master_version" "major"; then
-            echo
+            clear
             echo "${bright_red}Unable to validate major version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${toml_path} file.${reset}"
             exit 1
         fi
 
         # Validate if the only change in the commit is to the version variable in the Cargo.toml file
         if ! check_toml_file "${toml_path}"; then
-            echo
+            clear
             echo "${bright_red}Major version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
             exit 1
         fi
@@ -236,20 +243,21 @@ for crate in "${crate_names[@]}"; do
     fi
 
     # Compare the crate minor version with the master version and update if necessary
+    echo "Checking if minor version was changed..."
     if compare_versions "$crate_version" "$master_version" "minor" && [[ $? -eq 2 ]]; then
-        echo "${yellow}Minor version change detected in commit history. Validating version change...${reset}"
+        echo "${yellow}Minor version change detected in commit history! Validating version change...${reset}"
         was_minor_version_changed=true
 
         # Validate that the minor version was increased only by 1
         if ! was_version_bumped "$crate_version" "$master_version" "minor"; then
-            echo
+            clear
             echo "${bright_red}Minor version updates can only be done in increments of 1. Double check the Cargo.toml file for ${crate}.${reset}"
             exit 1
         fi
 
         # Validate if the only change in the commit is to the version variable in the Cargo.toml file
         if ! check_toml_file "${toml_path}"; then
-            echo
+            clear
             echo "${bright_red}Unable to validate minor version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${crate}/Cargo.toml file.${reset}"
             exit 1
         fi
@@ -259,9 +267,10 @@ for crate in "${crate_names[@]}"; do
 
     # Compare the crate version with the master version and update if necessary
     # If the major or minor version was changed, then the patch version is not checked
+    echo "Checking if patch bump is required..."
     if compare_versions "$crate_version" "$master_version" "patch" && [[ $? -le 1 ]] && ! $was_major_version_changed && ! $was_minor_version_changed; then
         # Extract major, minor, and patch versions using regex and validate them
-        echo "${yellow}Version bump required. Bumping version...${reset}"
+        echo "${yellow}Patch bump required! Bumping version...${reset}"
 
         # Bump the version
         new_version=$(bump_version "$crate_version" "patch")
