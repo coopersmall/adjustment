@@ -39,8 +39,8 @@ compare_versions() {
     fi
 
     if [[ $version_type = "minor" ]]; then
-        echo $(10#${v1[1]:-0})
-        echo $(10#${v2[1]:-0})
+        echo $(1(0#${v1[1]:-0}))
+        echo $((10#${v2[1]:-0}))
         if ((10#${v1[1]:-0} == 10#${v2[1]:-0})); then
             # The minor version is the same as master
             return 0
