@@ -253,7 +253,7 @@ else
 
         # Get the current version of the crate under [package]
         crate_version=$(awk -F'"' '/^\[package\]/ { package = 1 } package && /^version *=/ { gsub(/^[[:space:]]+|"[[:space:]]+$/, "", $2); print $2; exit }' "${toml_path}")
-        echo "Current version: ${yellow}${crate_version}${reset}"
+        echo "Current version: ${light_green}${crate_version}${reset}"
 
         # Check if there are changes in the crate directory since the last commit
         echo "Checking for changes in ${crate}..."
@@ -348,7 +348,7 @@ else
                 echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
                 echo
             else
-                echo "No version bump required."
+                echo "${light_green}No version bump required.${reset}"
                 echo
             fi
         else
