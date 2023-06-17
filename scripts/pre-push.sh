@@ -206,7 +206,7 @@ for crate in "${crate_names[@]}"; do
     echo "Checking for changes in ${crate}..."
 
     # If there are no changes in the crate directory, skip to the next crate
-    if !output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${src_path}"); then
+    if ! git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${src_path}"; then
         echo "${yellow}No changes detected in ${crate}.${reset}"
         continue
     fi
@@ -266,7 +266,7 @@ for crate in "${crate_names[@]}"; do
     fi
 
     # Compare the crate version with the master version and update if necessary
-    if compare_patch_versions "$crate_version" "$master_version" && [[ $? -le 1 ]] && ! was_major_version_changed && ! was_minor_version_changed; then
+    if compare_patch_versions "$crate_version" "$master_version" && [[ $? -le 1 ]] && ! $was_major_version_changed} && ! ${was_minor_version_changed}; then
         # Extract major, minor, and patch versions using regex and validate them
         echo "${yellow}Version bump required. Bumping version...${reset}"
 
