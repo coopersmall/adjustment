@@ -243,7 +243,7 @@ else
 
     # Compare crate versions with master and update if necessary
     for crate in "utils" "common" "macros" "workspace"; do
-        echo "${yellow}Checking ${crate} version...${reset}"
+        echo "Checking ${crate} version..."
 
         if [ "${crate}" = "workspace" ]; then
             toml_path="Cargo.toml"
