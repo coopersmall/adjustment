@@ -199,6 +199,21 @@ echo "Pulling latest changes from origin..."
 git pull origin master
 echo
 
+echo "${yellow}Running cargo build...${reset}"
+cargo build
+echo "${green}cargo build passed!${reset}"
+
+echo "${yellow}Running cargo test...${reset}"
+cargo test
+echo "${green}cargo test passed!${reset}"
+
+echo "${yellow}Running cargo fmt...${reset}"
+cargo fmt --all -- --check
+echo "${green}cargo fmt passed!${reset}"
+
+# Run cargo clippy
+# cargo clippy
+
 echo "${yellow}Checking for version changes...${reset}"
 echo
 
@@ -360,16 +375,4 @@ for crate in "${crate_names[@]}"; do
     echo
 done
 
-# Run cargo build
-cargo build
-
-# Run cargo test
-cargo test
-
-# Run cargo fmt
-cargo fmt --all -- --check
-
-# Run cargo clippy
-# cargo clippy
-#
 
