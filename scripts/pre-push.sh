@@ -281,7 +281,9 @@ for crate in "${crate_names[@]}"; do
         sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${toml_path}" > temp
         mv temp "${toml_path}"
 
+        # Commit the changes
         git add "${toml_path}"
+        git commit -m "bump ${crate} version to ${new_version}"
 
         echo "${light_green}Bumped ${crate} version to ${new_version}${reset}"
         echo
@@ -290,16 +292,6 @@ for crate in "${crate_names[@]}"; do
         echo
     fi
 done
-
-# Commit the changes if there are modifications
-if git diff --cached --quiet; then
-    echo "No version changes detected. Nothing to commit."
-else
-    echo "Committing version changes..."
-    git commit -m "bump versions"
-    version_commit_sha=$(git rev-parse HEAD)
-    echo "${light_green}Version changes commited.${reset}"
-fi
 
 # Run cargo build
 cargo build
