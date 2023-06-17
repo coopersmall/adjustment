@@ -21,7 +21,7 @@ compare_versions() {
     IFS='.' read -ra v1 <<< "$1"
     IFS='.' read -ra v2 <<< "$2"
 
-    if [[ version_type == "major" ]]; then
+    if [[ version_type = "major" ]]; then
         # Compare the major version with master
         if ((10#${v1[0]} == 10#${v2[0]})); then
             # The major version is the same as master
@@ -35,7 +35,7 @@ compare_versions() {
         fi
     fi
 
-    if [[ version_type == "minor" ]]; then
+    if [[ version_type = "minor" ]]; then
         # Compare the minor version with master
         if ((10#${v1[1]:-0} == 10#${v2[1]:-0})); then
             # The minor version is the same as master
@@ -49,7 +49,7 @@ compare_versions() {
         fi
     fi
 
-    if [[ version_type == "patch" ]]; then
+    if [[ version_type = "patch" ]]; then
         # Compare the patch version with master
         if ((10#${v1[2]:-0} == 10#${v2[2]:-0})); then
             # The patch version is the same as master
