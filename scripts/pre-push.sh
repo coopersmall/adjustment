@@ -62,6 +62,9 @@ compare_versions() {
             return 2
         fi
     fi
+
+    echo "Invalid version type: ${version_type}"
+    exit 1
 }
 
 was_version_bumped() {
