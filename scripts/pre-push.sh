@@ -254,13 +254,11 @@ for crate in "${crate_names[@]}"; do
         echo "Major version change not detected in commit history."
     fi
 
-    compare_versions "$crate_version" "$master_version" "minor"
-    output=$?
-    echo "Output: ${output}"
-
     # Compare the crate minor version with the master version and update if necessary
     echo "Checking if minor version was changed..."
-    if compare_versions "$crate_version" "$master_version" "minor" && [[ $? -eq 2 ]]; then
+
+    compare_versions "$crate_version" "$master_version" "minor"
+    if [[ $? -eq 2 ]]; then
         echo "${yellow}Minor version change detected in commit history! Validating version change...${reset}"
         was_minor_version_changed=true
 
