@@ -167,6 +167,7 @@ bump_version() {
         new_patch=$((patch + 1))
         new_version="${major}.${minor}.${new_patch}"
     else
+        echo
         echo "Invalid version type: ${version_type}"
         exit 1
     fi
@@ -206,13 +207,13 @@ for crate in "${crate_names[@]}"; do
     echo "Checking for changes in ${crate}..."
 
     # If there are no changes in the crate directory, skip to the next crate
-    if ! output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${src_path}"); then
+    if ! output=$(git diff --name-only --diff-filter=ACMRTUXB "$(git merge-base origin/master HEAD)" -- "${src_path}") && [ -n "$output" ]; then
         echo "${yellow}No changes detected in ${crate}.${reset}"
         continue
     fi
 
-    echo
     echo "${yellow}Changes detected in ${crate}.${reset}"
+    echo
     echo "Checking if version bump is required..."
 
     # Get the master version of the crate under [package]
@@ -223,8 +224,7 @@ for crate in "${crate_names[@]}"; do
     was_minor_version_changed=false
 
     # Compare the crate major version with the master version and update if necessary
-    if compare_major_versions "$crate_version" "$master_version" && [[ $? -eq 1 ]]; then
-        echo
+    if compare_major_versions "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
         echo "${yellow}Major version change detected in commit history. Validating version change...${reset}"
         was_major_version_changed=true
 
@@ -246,8 +246,7 @@ for crate in "${crate_names[@]}"; do
     fi
 
     # Compare the crate minor version with the master version and update if necessary
-    if compare_minor_version "$crate_version" "$master_version" && [[ $? -eq 1 ]]; then
-        echo
+    if compare_minor_version "$crate_version" "$master_version" && [[ $? -eq 2 ]]; then
         echo "${yellow}Minor version change detected in commit history. Validating version change...${reset}"
         was_minor_version_changed=true
 
@@ -271,7 +270,6 @@ for crate in "${crate_names[@]}"; do
     # Compare the crate version with the master version and update if necessary
     if compare_patch_versions "$crate_version" "$master_version" && [[ $? -le 1 ]] && ! $was_major_version_changed && ! $was_minor_version_changed; then
         # Extract major, minor, and patch versions using regex and validate them
-        echo
         echo "${yellow}Version bump required. Bumping version...${reset}"
 
         # Bump the version
