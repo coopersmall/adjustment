@@ -266,12 +266,12 @@ for crate in "${crate_names[@]}"; do
     fi
 
     # Compare the crate version with the master version and update if necessary
-    if compare_patch_versions "$crate_version" "$master_version" && [[ $? -le 1 ]] && ! $was_major_version_changed} && ! ${was_minor_version_changed}; then
+    if compare_patch_versions "$crate_version" "$master_version" && [[ $? -le 1 ]] && ! $was_major_version_changed && ! $was_minor_version_changed; then
         # Extract major, minor, and patch versions using regex and validate them
         echo "${yellow}Version bump required. Bumping version...${reset}"
 
         # Bump the version
-        new_version=$(bump_version "$crate_version" "$version_type")
+        new_version=$(bump_version "$crate_version" "patch")
 
         # Update the version in Cargo.toml
         sed -e "/^\[package\]$/,/^\[/ s/^version *=.*/version = \"$new_version\"/" "${toml_path}" > temp
