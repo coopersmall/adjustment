@@ -22,62 +22,57 @@ compare_versions() {
     IFS='.' read -ra v2 <<< "$2"
 
     if [[ $version_type = "major" ]]; then
-        # Compare the major version with master
-        if ((10#${v1[0]} == 10#${v2[0]})); then
-            # The major version is the same as master
-            return 0
-        elif ((10#${v1[0]} < 10#${v2[0]})); then
-            # The major version is less than the master version
-            return 1
-        elif ((10#${v1[0]} > 10#${v2[0]})); then
-            # The major version is greater than the master version
-            return 2
-        else
-            echo "Something went wrong comparing the major versions"
-            exit 1
-        fi
+        position=0
+    elif [[ $version_type = "minor" ]]; then
+        position=1
+    elif [[ $version_type = "patch" ]]; then
+        position=2
+    else
+        clear
+        echo "Invalid version type: ${version_type}"
+        exit 1
     fi
 
-    if [[ $version_type = "minor" ]]; then
-        if ((10#${v1[1]:-0} == 10#${v2[1]:-0})); then
-            # The minor version is the same as master
-            return 0
-        elif ((10#${v1[1]:-0} < 10#${v2[1]:-0})); then
-            # The minor version is less than the master version
-            return 1
-        elif ((10#${v1[1]:-0} > 10#${v2[1]:-0})); then
-            # The minor version is greater than the master version
-            return 2
-        else
-            echo "Something went wrong comparing the minor versions"
-            exit 1
-        fi
+    if ((10#${v1[$position]} == 10#${v2[$position]})); then
+        return 0
+    elif ((10#${v1[$position]} < 10#${v2[$position]})); then
+        return 1
+    elif ((10#${v1[$position]} > 10#${v2[$position]})); then
+        return 2
+    else
+        echo "Something went wrong comparing the $version_type versions"
+        exit 1
     fi
-
-    if [[ $version_type = "patch" ]]; then
-        # Compare the patch version with master
-        if ((10#${v1[2]:-0} == 10#${v2[2]:-0})); then
-            # The patch version is the same as master
-            return 0
-        elif ((10#${v1[2]:-0} < 10#${v2[2]:-0})); then
-            # The patch version is less than the master version
-            return 1
-        elif
-            ((10#${v1[2]:-0} > 10#${v2[2]:-0})); then
-            # The patch version is greater than the master version
-            return 2
-        else
-            echo "Something went wrong comparing the patch versions"
-            exit 1
-        fi
-    fi
-
-    clear
-    echo "Invalid version type: ${version_type}"
-    exit 1
 }
 
-was_version_bumped() {
+is_bumped_version() {
+    current_version=$1
+    master_version=$2
+    version_type=$3
+
+    IFS='.' read -ra current <<< "$current_version"
+    IFS='.' read -ra master <<< "$master_version"
+
+    if [[ $version_type == "major" ]]; then
+        position=0
+    elif [[ $version_type == "minor" ]]; then
+        position=1
+    elif [[ $version_type == "patch" ]]; then
+        position=2
+    else
+        clear
+        echo "Invalid version type: ${version_type}"
+        exit 1
+    fi
+
+    if ((10#${current[$position]} == 10#${master[$position]} + 1)); then
+        return 0
+    else
+        return 1
+    fi
+}
+
+is_new_version() {
     current_version=$1
     master_version=$2
     version_type=$3
@@ -87,7 +82,7 @@ was_version_bumped() {
 
     if [[ $version_type == "major" ]]; then
         # Compare the major version with master to see if it was increased by one and the minor and patch versions are 0 (i.e. 1.0.0 -> 2.0.0)
-        if ((10#${current[0]} == 10#${master[0]} + 1)) && ((10#${current[1]} == 0)) && ((10#${current[2]} == 0)); then
+        if ((10#${current[1]} == 0)) && ((10#${current[2]} == 0)); then
             return 0
         else
             return 1
@@ -96,7 +91,7 @@ was_version_bumped() {
 
     if [[ $version_type == "minor" ]]; then
         # Compare the minor version with master to see if it was increased by one and the patch version is 0 (i.e. 1.1.0 -> 1.2.0)
-        if ((10#${current[0]} == 10#${master[0]})) && ((10#${current[1]} == 10#${master[1]} + 1)) && ((10#${current[2]} == 0)); then
+        if ((10#${current[2]} == 0)); then
             return 0
         else
             return 1
@@ -105,11 +100,8 @@ was_version_bumped() {
 
     if [[ $version_type == "patch" ]]; then
         # Compare the patch version with master to see if it was increased by one (i.e. 1.1.1 -> 1.1.2)
-        if ((10#${current[0]} == 10#${master[0]})) && ((10#${current[1]} == 10#${master[1]})) && ((10#${current[2]} == 10#${master[2]} + 1)); then
-            return 0
-        else
-            return 1
-        fi
+        # Always return true for patch versions
+        return 0
     fi
 
     clear
@@ -236,7 +228,7 @@ for crate in "${crate_names[@]}"; do
         was_major_version_changed=true
 
         # Validate that the major version was increased only by 1
-        if ! was_version_bumped "$crate_version" "$master_version" "major"; then
+        if ! is_bumped_version "$crate_version" "$master_version" "major"; then
             echo "${bright_red}Unable to validate major version change. Please ensure that the only change in the commit for your branch is to the version variable in the ${toml_path} file.${reset}"
             echo
             exit 1
@@ -263,9 +255,8 @@ for crate in "${crate_names[@]}"; do
         was_minor_version_changed=true
 
         # Validate that the minor version was increased only by 1
-        if ! was_version_bumped "$crate_version" "$master_version" "minor"; then
+        if ! is_bumped_version "$crate_version" "$master_version" "minor"; then
             echo "${bright_red}Minor version updates can only be done in increments of 1${reset}"
-            echo "Master version: ${yellow}${master_version}${reset}, Branch version: ${bright_red}${crate_version}${reset}"
             echo "${yellow}Double check the Cargo.toml file for ${crate}.${reset}"
             echo
             exit 1
