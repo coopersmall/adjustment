@@ -1,61 +1,50 @@
 use common::bitcoin::Bitcoin;
 use common::currency::Currency;
-use utils::errors::{Error, ErrorCode, ErrorMeta};
+use std::borrow::Cow;
+use std::sync::{Arc, Mutex};
+use tokio;
+use tokio::sync::{futures, mpsc};
+use utils::adapters::http_client::*;
+use utils::errors::{Error, ErrorCode, ErrorMessage, ErrorMeta};
 use utils::json::Parse;
+use utils::{async_main, spawn, spawn_async};
 
-fn main() {
-    let error_meta = ErrorMeta::new()
-        .add("Invalid bitcoin", "help")
-        .add("Invalid eth", "help")
+const NUM_THREADS: usize = 10;
+
+async_main! {
+    let url = Url::new("https://www.webhook.site", "/27acc74f-7f52-4cfc-abff-9ff4c3af5ca7")
         .build();
 
-    let result = Currency::new()
-        .name("Dollars")
-        .symbol("$")
-        .code("USD")
-        .build();
+    let request = HttpRequest::new(
+        url.as_ref(),
+        HttpMethod::GET,
+    ).build();
 
-    let currency: Currency = match result {
-        Ok(currency) => currency,
-        Err(err) => {
-            let invalid_error = Error::new(err, ErrorCode::Invalid).with_meta(error_meta.clone());
-            let wrapped_error = Error::new("Something", ErrorCode::Invalid)
-                .with_cause(Box::new(invalid_error))
-                .with_meta(error_meta.clone());
-            println!("Error: {:?}", wrapped_error.source());
-            return;
+    let mut client_pool = ReqwestHttpClientPool::new();
+    let (tx, mut rx) = mpsc::channel::<Result<HttpResponse, HttpClientError>>(NUM_THREADS);
+
+
+    for _ in 0..NUM_THREADS {
+        let tx = tx.clone();
+
+        let client = client_pool.borrow().await.unwrap();
+        let request = request.clone();
+
+        spawn_async! {
+            let response = client.send_request(request).await;
+            if let Err(err) = tx.send(response).await {
+                eprintln!("Error sending result: {:?}", err);
+            }
         }
-    };
+    }
 
-    println!("Currency: {:?}", currency.marshal());
-
-    let currency_code = currency.code();
-    println!("Currency Code: {:?}", currency_code.marshal());
-
-    let mut bitcoin = Bitcoin::new().name("Bitcoin").price(currency).build();
-
-    let bitcoin_data = match bitcoin_marshalling(&bitcoin) {
-        Ok(data) => data,
-        Err(err) => {
-            println!("Error: {:?}", err.marshal());
-            return;
+    while let Some(result) = rx.recv().await {
+        match result {
+            Ok(response) => {
+                let json = &response.body().marshal().unwrap();
+                println!("{:?}", json)
+            },
+            Err(err) => println!("{:?}", err),
         }
-    };
-
-    println!("Bitcoin: {:?}", bitcoin_data);
-
-    bitcoin = match Bitcoin::unmarshal(bitcoin_data.as_str()) {
-        Ok(bitcoin) => bitcoin,
-        Err(err) => {
-            println!("Error: {:?}", err);
-            return;
-        }
-    };
-
-    println!("Bitcoin: {:?}", bitcoin.marshal());
-}
-
-fn bitcoin_marshalling<'a>(bitcoin: &Bitcoin) -> Result<String, Error> {
-    let invalid_error = Error::new("Invalid bitcoin", ErrorCode::Invalid);
-    return Err(invalid_error);
+    }
 }
