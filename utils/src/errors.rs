@@ -5,104 +5,147 @@ use std::{
     collections::HashMap,
     error::Error as StdError,
     fmt::{Display, Formatter},
+    rc::Rc,
 };
 
-pub mod codes;
-pub mod message;
-pub mod meta;
-
-pub use codes::ErrorCode;
-pub use message::ErrorMessage;
-pub use meta::ErrorMeta;
-
-#[derive(Debug, Error)]
-pub struct Error<'a> {
-    pub message: ErrorMessage<'a>,
-    pub code: ErrorCode,
-    pub meta: HashMap<String, String>,
-    pub is_transient: bool,
-    pub source: Option<Box<dyn StdError>>,
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum ErrorCode {
+    Invalid,
+    NotFound,
+    Unauthorized,
+    Forbidden,
+    Unprocessable,
+    Internal,
+    Unavailable,
+    Conflict,
+    Timeout,
+    Unknown,
 }
 
-impl<'a> Error<'a> {
-    pub fn new() -> ErrorBuilder<'a> {
-        ErrorBuilder::new()
+impl Display for ErrorCode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ErrorCode::Invalid => write!(f, "invalid"),
+            ErrorCode::NotFound => write!(f, "not_found"),
+            ErrorCode::Unauthorized => write!(f, "unauthorized"),
+            ErrorCode::Forbidden => write!(f, "forbidden"),
+            ErrorCode::Unprocessable => write!(f, "unprocessable"),
+            ErrorCode::Internal => write!(f, "internal"),
+            ErrorCode::Unavailable => write!(f, "unavailable"),
+            ErrorCode::Conflict => write!(f, "conflict"),
+            ErrorCode::Timeout => write!(f, "timeout"),
+            ErrorCode::Unknown => write!(f, "unknown"),
+        }
     }
 }
 
-impl<'a> Error<'a> {
-    fn is_transient_error(&self) -> bool {
-        self.is_transient
+pub struct ErrorMeta(HashMap<Rc<str>, Rc<str>>);
+
+impl ErrorMeta {
+    pub fn new() -> ErrorMetaBuilder {
+        ErrorMetaBuilder::new()
+    }
+}
+
+impl Default for ErrorMeta {
+    fn default() -> Self {
+        ErrorMeta(HashMap::new())
+    }
+}
+
+impl From<HashMap<Rc<str>, Rc<str>>> for ErrorMeta {
+    fn from(meta: HashMap<Rc<str>, Rc<str>>) -> Self {
+        ErrorMeta(meta)
+    }
+}
+
+impl Into<HashMap<Rc<str>, Rc<str>>> for ErrorMeta {
+    fn into(self) -> HashMap<Rc<str>, Rc<str>> {
+        self.0
+    }
+}
+
+pub struct ErrorMetaBuilder(HashMap<Rc<str>, Rc<str>>);
+
+impl ErrorMetaBuilder {
+    fn new() -> Self {
+        ErrorMetaBuilder(HashMap::new())
     }
 
-    fn is_known_error(&self) -> bool {
-        self.code != ErrorCode::Unknown
-    }
-
-    fn get_stack(&self) -> Option<String> {
-        self.source.as_ref().map(|e| format!("{:?}", e))
-    }
-
-    fn set_code(&mut self, code: ErrorCode) -> &mut Self {
-        self.code = code;
+    pub fn add(&mut self, key: &str, value: &str) -> &mut Self {
+        self.0.insert(key.into(), value.into());
         self
     }
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.source.as_ref().map(|e| e.as_ref())
+
+    pub fn build(&mut self) -> Rc<HashMap<Rc<str>, Rc<str>>> {
+        Rc::new(std::mem::take(&mut self.0))
     }
 }
 
-impl<'a> Error<'a> {
-    fn from(source: impl Into<Box<dyn std::error::Error + Send + Sync>>) -> Self {
-        Error::new().source(source.into()).build()
-    }
+#[derive(Debug, Error)]
+pub struct Error {
+    message: Rc<str>,
+    code: ErrorCode,
+    pub meta: Option<Rc<HashMap<Rc<str>, Rc<str>>>>,
+    is_transient: bool,
+    source: Option<Box<dyn StdError>>,
 }
 
-impl<'a> Display for Error<'a> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "App Error: {}", self.message)
-    }
-}
-
-impl Default for Error<'_> {
-    fn default() -> Self {
-        Self {
-            message: ErrorMessage::from_str(
-                "Application error occurred (please add more details to assist with debugging)",
-            ),
-            code: ErrorCode::Unknown,
-            meta: HashMap::new(),
+impl Error {
+    pub fn new(message: &str, code: ErrorCode) -> Error {
+        Error {
+            message: message.into(),
+            code,
+            meta: None,
             is_transient: true,
+            source: None,
+        }
+    }
+
+    pub fn permanent(message: &str, code: ErrorCode) -> Error {
+        Error {
+            message: message.into(),
+            code,
+            meta: None,
+            is_transient: false,
             source: None,
         }
     }
 }
 
-impl<'a> From<ErrorBuilder<'a>> for Error<'a> {
-    fn from(builder: ErrorBuilder<'a>) -> Self {
-        builder.build()
+impl Error {
+    pub fn with_cause(mut self, cause: Box<dyn StdError>) -> Self {
+        self.source = Some(cause);
+        self
+    }
+
+    pub fn with_meta(mut self, meta: Rc<HashMap<Rc<str>, Rc<str>>>) -> Self {
+        self.meta = Some(meta.clone());
+        self
+    }
+
+    pub fn get_stack(&self) -> Option<String> {
+        self.source.as_ref().map(|e| format!("{:?}", e))
+    }
+
+    pub fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.source.as_ref().map(|e| e.as_ref())
     }
 }
 
-impl<'a> From<Box<dyn std::error::Error>> for Error<'a> {
-    fn from(error: Box<dyn std::error::Error>) -> Self {
-        Self {
-            message: ErrorMessage::from_str(""),
-            code: ErrorCode::Unknown,
-            meta: HashMap::new(),
-            is_transient: true,
-            source: Some(error),
-        }
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "App Error: {}", self.message)
     }
 }
 
-impl<'a> Serialize for Error<'a> {
+impl Serialize for Error {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         let mut state = serializer.serialize_struct("Error", 5)?;
-        state.serialize_field("message", &self.message)?;
+        state.serialize_field("message", &self.message.to_string())?;
         state.serialize_field("code", &self.code)?;
         state.serialize_field("meta", &self.meta)?;
         state.serialize_field("is_transient", &self.is_transient)?;
@@ -110,7 +153,7 @@ impl<'a> Serialize for Error<'a> {
     }
 }
 
-impl<'de, 'a> Deserialize<'de> for Error<'a> {
+impl<'de> Deserialize<'de> for Error {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -128,8 +171,8 @@ impl<'de, 'a> Deserialize<'de> for Error<'a> {
             marker: std::marker::PhantomData<&'a ()>,
         }
 
-        impl<'de, 'a> serde::de::Visitor<'de> for AppErrorVisitor<'a> {
-            type Value = Error<'a>;
+        impl<'de> serde::de::Visitor<'de> for AppErrorVisitor<'_> {
+            type Value = Error;
 
             fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
                 formatter.write_str("struct Error")
@@ -224,110 +267,4 @@ impl<'de, 'a> Deserialize<'de> for Error<'a> {
             },
         )
     }
-}
-
-pub struct ErrorBuilder<'a> {
-    message: Option<ErrorMessage<'a>>,
-    code: Option<ErrorCode>,
-    meta: Option<HashMap<String, String>>,
-    is_transient: Option<bool>,
-    source: Option<Box<dyn StdError>>,
-}
-
-impl<'a> ErrorBuilder<'a> {
-    pub fn new() -> Self {
-        Self {
-            message: None,
-            code: None,
-            meta: None,
-            is_transient: None,
-            source: None,
-        }
-    }
-
-    pub fn message(mut self, message: ErrorMessage<'a>) -> Self {
-        self.message = Some(message);
-        self
-    }
-
-    pub fn code(mut self, code: ErrorCode) -> Self {
-        self.code = Some(code);
-        self
-    }
-
-    pub fn add_meta(mut self, key: String, value: String) -> Self {
-        if self.meta.is_none() {
-            self.meta = Some(HashMap::new());
-        }
-
-        if let Some(meta) = self.meta.as_mut() {
-            meta.insert(key, value);
-        }
-
-        self
-    }
-
-    pub fn set_meta(mut self, meta: HashMap<String, String>) -> Self {
-        self.meta = Some(meta);
-        self
-    }
-
-    pub fn is_transient(mut self, is_transient: bool) -> Self {
-        self.is_transient = Some(is_transient);
-        self
-    }
-
-    pub fn source(mut self, source: Box<dyn StdError>) -> Self {
-        self.source = Some(source);
-        self
-    }
-
-    pub fn build(self) -> Error<'a> {
-        Error {
-            message: self.message.unwrap_or_default(),
-            code: self.code.unwrap_or_default(),
-            meta: self.meta.unwrap_or_default(),
-            is_transient: self.is_transient.unwrap_or(true),
-            source: self.source,
-        }
-    }
-}
-
-pub fn new_error<'a>() -> ErrorBuilder<'a> {
-    ErrorBuilder::new()
-}
-
-pub fn from_string(
-    message: String,
-    code: Option<ErrorCode>,
-    meta: Option<HashMap<String, String>>,
-    cause: Option<Box<dyn StdError>>,
-) -> Error<'static> {
-    Error {
-        message: ErrorMessage::from_string(message),
-        code: code.unwrap_or_default(),
-        meta: meta.unwrap_or_default(),
-        is_transient: true,
-        source: cause,
-    }
-}
-
-pub fn from_str<'a>(
-    message: &'a str,
-    code: Option<ErrorCode>,
-    meta: Option<HashMap<String, String>>,
-    cause: Option<Box<dyn StdError>>,
-) -> Error<'a> {
-    Error {
-        message: ErrorMessage::from_str(message),
-        code: code.unwrap_or_default(),
-        meta: meta.unwrap_or_default(),
-        is_transient: true,
-        source: cause,
-    }
-}
-
-mod errors {
-    pub use crate::errors::Error;
-    pub use crate::errors::{ErrorCode, ErrorMessage, ErrorMeta};
 }

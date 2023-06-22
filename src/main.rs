@@ -1,9 +1,14 @@
 use common::bitcoin::Bitcoin;
 use common::currency::Currency;
-use utils::errors::{Error, ErrorCode, ErrorMessage, ErrorMeta};
+use utils::errors::{Error, ErrorCode, ErrorMeta};
 use utils::json::Parse;
 
 fn main() {
+    let error_meta = ErrorMeta::new()
+        .add("Invalid bitcoin", "help")
+        .add("Invalid eth", "help")
+        .build();
+
     let result = Currency::new()
         .name("Dollars")
         .symbol("$")
@@ -13,56 +18,11 @@ fn main() {
     let currency: Currency = match result {
         Ok(currency) => currency,
         Err(err) => {
-            let invalid_error = Error::new()
-                .message(ErrorMessage::from_str(err))
-                .code(ErrorCode::Invalid)
-                .build();
-
-            let wrapped_error = Error::new()
-                .message(ErrorMessage::from_str("Error parsing currency"))
-                .code(ErrorCode::Empty)
-                .source(Box::new(invalid_error))
-                .build();
-
-            println!("Error: {:?}", wrapped_error.marshal());
-
-            let source = match wrapped_error.source {
-                Some(source) => source,
-                None => {
-                    println!("Error: {:?}", wrapped_error.marshal());
-                    return;
-                }
-            };
-
-            let other_error = Error::new()
-                .message(ErrorMessage::from_str("Error parsing currency"))
-                .code(ErrorCode::Empty)
-                .source(source)
-                .add_meta("service".to_string(), "test".to_string())
-                .add_meta("deployment".to_string(), "master".to_string())
-                .add_meta("coorelation_id".to_string(), "123".to_string())
-                .build();
-
-            let other_error_json = match other_error.marshal() {
-                Ok(json) => json,
-                Err(err) => {
-                    println!("Error: {:?}", err);
-                    return;
-                }
-            };
-
-            println!("Error: {:?}", other_error_json);
-
-            let meta = match ErrorMeta::from_json(other_error_json.as_str()) {
-                Ok(meta) => meta,
-                Err(err) => {
-                    println!("Error: {:?}", err);
-                    return;
-                }
-            };
-
-            println!("Error Meta: {:?}", meta);
-
+            let invalid_error = Error::new(err, ErrorCode::Invalid).with_meta(error_meta.clone());
+            let wrapped_error = Error::new("Something", ErrorCode::Invalid)
+                .with_cause(Box::new(invalid_error))
+                .with_meta(error_meta.clone());
+            println!("Error: {:?}", wrapped_error.source());
             return;
         }
     };
@@ -95,8 +55,7 @@ fn main() {
     println!("Bitcoin: {:?}", bitcoin.marshal());
 }
 
-fn bitcoin_marshalling<'a>(bitcoin: &Bitcoin) -> Result<String, Error<'a>> {
-    Err(Error::new()
-        .message(ErrorMessage::from_str("Error marshalling bitcoin"))
-        .build())
+fn bitcoin_marshalling<'a>(bitcoin: &Bitcoin) -> Result<String, Error> {
+    let invalid_error = Error::new("Invalid bitcoin", ErrorCode::Invalid);
+    return Err(invalid_error);
 }
