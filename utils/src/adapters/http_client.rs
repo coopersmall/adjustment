@@ -218,11 +218,11 @@ impl ReqwestHttpClientPool {
         Ok(self.clients[client_index].clone())
     }
 
-    pub async fn return_client(&mut self, index: usize) {
+    pub async fn return_client(&mut self, client: Arc<ReqwestHttpClient>) {
         let mut borrowed = match self.borrowed.try_write() {
             Ok(borrowed) => borrowed,
             Err(_) => return,
         };
-        borrowed.remove(&index);
+        borrowed.remove(&client.index);
     }
 }

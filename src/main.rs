@@ -22,23 +22,23 @@ async_main! {
     ).build();
 
     let mut client_pool = ReqwestHttpClientPool::with_capacity(NUM_THREADS);
-        let (tx, mut rx) = mpsc::channel::<Result<HttpResponse, Error>>(NUM_THREADS);
+    let (tx, mut rx) = mpsc::channel::<Result<HttpResponse, Error>>(NUM_THREADS);
 
+    let client = match client_pool.borrow_client().await {
+        Ok(client) => client,
+        Err(err) => {
+            let request_err = Error::new("test", ErrorCode::Invalid).with_cause(err);
+            eprintln!("Error getting client: {:?}", request_err);
+            return;
+        }
+    };
 
     for _ in 0..NUM_THREADS {
         let tx = tx.clone();
         let request = request.clone();
+        let client = client.clone();
 
-        let client = match client_pool.borrow_client().await {
-            Ok(client) => client,
-            Err(err) => {
-                let request_err = Error::new("test", ErrorCode::Invalid).with_cause(err);
-                eprintln!("Error getting client: {:?}", request_err);
-                return;
-            }
-        };
-
-             spawn_async! {
+        spawn_async! {
             let response = client.send_request(request).await;
             if let Err(err) = tx.send(response).await {
                 let err = Error::new("test", ErrorCode::Invalid).with_cause(err);
@@ -46,6 +46,9 @@ async_main! {
             }
         }
     }
+
+    drop(tx);
+    client_pool.return_client(client).await;
 
     while let Some(result) = rx.recv().await {
         match result {
