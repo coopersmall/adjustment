@@ -4,8 +4,7 @@ use reqwest::{Client, Method};
 use thiserror::Error;
 
 use std::collections::HashSet;
-use std::error::Error as StdError;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
 pub mod errors;
@@ -19,8 +18,7 @@ pub use self::request::{HttpMethod, HttpRequest, HttpRequestBuilder};
 pub use self::response::{HttpResponse, HttpResponseBuilder};
 pub use self::url::Url;
 
-use crate::errors::codes::InternalErrorCode;
-use crate::errors::{Error, ErrorCode, ErrorMessage};
+use crate::errors::{Error, ErrorCode};
 
 const DEFAULT_TIMEOUT_SECONDS: u64 = 30;
 const DEFAULT_POOL_SIZE: usize = 10;
@@ -37,15 +35,33 @@ pub enum HttpClientError {
     ParseError,
 }
 
+impl From<HttpClientError> for Error {
+    fn from(err: HttpClientError) -> Self {
+        match err {
+            HttpClientError::ConnectError(err) => Error::new(
+                format!("Failed to connect to server: {}", err).as_str(),
+                ErrorCode::Internal,
+            ),
+            HttpClientError::TimeoutError => Error::new(
+                "Timeout occurred while connecting to server",
+                ErrorCode::Internal,
+            ),
+            HttpClientError::ParseError => {
+                Error::new("Failed to parse response from server", ErrorCode::Internal)
+            }
+        }
+    }
+}
+
 // Create a trait for the HTTP client.
 #[async_trait]
 pub trait HttpClient {
-    async fn send_request(&self, request: HttpRequest) -> Result<HttpResponse, HttpClientError>;
+    async fn send_request(&self, request: Arc<HttpRequest>) -> Result<HttpResponse, Error>;
 }
 
 pub struct ReqwestHttpClient {
     client: Client,
-    pool: Arc<Box<ReqwestHttpClientPool>>,
+    borrowed: Arc<RwLock<HashSet<usize>>>,
     index: usize,
 }
 
@@ -57,7 +73,7 @@ impl ReqwestHttpClient {
 
 #[async_trait]
 impl HttpClient for ReqwestHttpClient {
-    async fn send_request(&self, request: HttpRequest) -> Result<HttpResponse, HttpClientError> {
+    async fn send_request(&self, request: Arc<HttpRequest>) -> Result<HttpResponse, Error> {
         let method = match request.method {
             HttpMethod::GET => Method::GET,
             HttpMethod::POST => Method::POST,
@@ -84,10 +100,19 @@ impl HttpClient for ReqwestHttpClient {
 
         drop(request);
 
-        let response = request_builder.send().await?;
+        let response = match request_builder.send().await {
+            Ok(response) => response,
+            Err(err) => {
+                return Err(Error::new(
+                    format!("Failed to send request: {}", err).as_str(),
+                    ErrorCode::Internal,
+                ));
+            }
+        };
+
         let status_code = response.status().as_u16();
         let headers = response.headers().to_owned();
-        let body = response.text().await?;
+        let body = response.text().await.or(Err(HttpClientError::ParseError))?;
 
         Ok(HttpResponseBuilder::new()
             .status_code(status_code)
@@ -99,13 +124,14 @@ impl HttpClient for ReqwestHttpClient {
 
 impl Drop for ReqwestHttpClient {
     fn drop(&mut self) {
-        let borrowed = self.pool.borrowed.lock();
-        if let Err(_) = borrowed {
-            return;
-        }
-        let mut set = borrowed.unwrap();
+        let mut borrowed = match self.borrowed.try_write() {
+            Ok(borrowed) => Some(borrowed),
+            Err(_) => None,
+        };
 
-        set.remove(&self.index);
+        if let Some(borrowed) = borrowed.as_mut() {
+            borrowed.remove(&self.index);
+        }
     }
 }
 
@@ -123,7 +149,7 @@ impl ReqwestHttpClientBuilder {
         self
     }
 
-    pub fn build(self, pool: Box<ReqwestHttpClientPool>, index: usize) -> ReqwestHttpClient {
+    pub fn build(self, borrowed: Arc<RwLock<HashSet<usize>>>, index: usize) -> ReqwestHttpClient {
         let mut client_builder = Client::builder();
         match self.timeout {
             Some(timeout) => client_builder = client_builder.timeout(timeout),
@@ -134,19 +160,17 @@ impl ReqwestHttpClientBuilder {
         }
 
         let client = client_builder.build().unwrap();
-        let pool = Arc::new(pool);
         ReqwestHttpClient {
             client,
-            pool,
+            borrowed,
             index,
         }
     }
 }
 
-#[derive(Clone)]
 pub struct ReqwestHttpClientPool {
     clients: Vec<Arc<ReqwestHttpClient>>,
-    borrowed: Arc<Mutex<HashSet<usize>>>,
+    borrowed: Arc<RwLock<HashSet<usize>>>,
 }
 
 impl ReqwestHttpClientPool {
@@ -156,31 +180,19 @@ impl ReqwestHttpClientPool {
 
     pub fn with_capacity(num_clients: usize) -> Self {
         let clients = Vec::with_capacity(num_clients);
-        let borrowed = Arc::new(Mutex::new(HashSet::new()));
+        let borrowed = Arc::new(RwLock::new(HashSet::new()));
 
         Self { clients, borrowed }
     }
 
     pub async fn borrow_client(&mut self) -> Result<Arc<ReqwestHttpClient>, Arc<Error>> {
-        let borrowed = self.borrowed.lock();
-        let mut borrowed_set = match borrowed {
-            Ok(set) => set,
-            Err(err) => {
-                return Err(Arc::new(
-                    Error::new()
-                        .code(ErrorCode::Internal(InternalErrorCode::Cache(
-                            crate::errors::codes::Cache::Query,
-                        )))
-                        .message(ErrorMessage::from_str("Failed to borrow client client"))
-                        .source(Box::new(
-                            Error::new()
-                                .message(ErrorMessage::from_string(format!("{}", err)))
-                                .build(),
-                        ))
-                        .build(),
-                ));
-            }
-        };
+        let mut borrowed_set = self.borrowed.try_write().map_err(|err| {
+            let poisoned_err = err.to_string();
+            Arc::new(Error::new(
+                format!("Failed to borrow client: {}", poisoned_err).as_str(),
+                ErrorCode::Internal,
+            ))
+        })?;
 
         let available_clients: Vec<usize> = self
             .clients
@@ -190,44 +202,27 @@ impl ReqwestHttpClientPool {
             .map(|(index, _)| index)
             .collect();
 
-        if available_clients.is_empty() {
-            let client_index = self.clients.len();
-            let client =
-                Arc::new(ReqwestHttpClient::new().build(Box::new(self.clone()), client_index));
+        let client_index = if available_clients.is_empty() {
+            let index = self.clients.len();
+            borrowed_set.insert(index);
 
-            borrowed_set.insert(client_index);
-
-            self.clients.push(client);
-
-            Ok(self.clients[client_index].clone())
+            let client = ReqwestHttpClient::new().build(self.borrowed.clone(), index);
+            self.clients.push(Arc::new(client));
+            index
         } else {
-            let client_index =
-                available_clients[rand::thread_rng().gen_range(0..available_clients.len())];
-            borrowed_set.insert(client_index);
+            let index = available_clients[rand::thread_rng().gen_range(0..available_clients.len())];
+            borrowed_set.insert(index);
+            index
+        };
 
-            match self.clients.get(client_index) {
-                Some(client) => Ok(Arc::clone(client)),
-                None => Err(Arc::new(
-                    Error::new()
-                        .code(ErrorCode::Internal(InternalErrorCode::Cache(
-                            crate::errors::codes::Cache::Query,
-                        )))
-                        .message(ErrorMessage::from_str("Failed to borrow client client"))
-                        .build(),
-                )),
-            }
-        }
+        Ok(self.clients[client_index].clone())
     }
 
     pub async fn return_client(&mut self, index: usize) {
-        let borrowed = self.borrowed.lock();
-        if let Err(_) = borrowed {
-            self.clients[index] =
-                Arc::new(ReqwestHttpClient::new().build(Box::new(self.clone()), index));
-            return;
-        }
-
-        let mut borrowed_set = borrowed.unwrap();
-        borrowed_set.remove(&index);
+        let mut borrowed = match self.borrowed.try_write() {
+            Ok(borrowed) => borrowed,
+            Err(_) => return,
+        };
+        borrowed.remove(&index);
     }
 }

@@ -12,10 +12,10 @@ pub enum HttpMethod {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HttpRequest {
     pub method: HttpMethod,
-    pub url: Arc<str>,
-    pub agent: Arc<str>,
-    pub headers: Option<HashMap<Arc<str>, Arc<str>>>,
-    pub body: Option<Arc<str>>,
+    pub url: Box<str>,
+    pub agent: Box<str>,
+    pub headers: Option<HashMap<Box<str>, Box<str>>>,
+    pub body: Option<Box<str>>,
 }
 
 impl HttpRequest {
@@ -26,10 +26,10 @@ impl HttpRequest {
 
 pub struct HttpRequestBuilder {
     method: HttpMethod,
-    url: Arc<str>,
-    agent: Arc<str>,
-    headers: Option<HashMap<Arc<str>, Arc<str>>>,
-    body: Option<Arc<str>>,
+    url: Box<str>,
+    agent: Box<str>,
+    headers: Option<HashMap<Box<str>, Box<str>>>,
+    body: Option<Box<str>>,
 }
 
 impl HttpRequestBuilder {
@@ -63,13 +63,13 @@ impl HttpRequestBuilder {
         self
     }
 
-    pub fn build(self) -> HttpRequest {
-        HttpRequest {
+    pub fn build(self) -> Arc<HttpRequest> {
+        Arc::new(HttpRequest {
             method: self.method,
             url: self.url,
             agent: self.agent,
             headers: self.headers,
             body: self.body,
-        }
+        })
     }
 }
