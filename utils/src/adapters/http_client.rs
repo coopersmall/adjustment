@@ -61,7 +61,6 @@ pub trait HttpClient {
 
 pub struct ReqwestHttpClient {
     client: Client,
-    borrowed: Arc<RwLock<HashSet<usize>>>,
     index: usize,
 }
 
@@ -122,19 +121,6 @@ impl HttpClient for ReqwestHttpClient {
     }
 }
 
-impl Drop for ReqwestHttpClient {
-    fn drop(&mut self) {
-        let mut borrowed = match self.borrowed.try_write() {
-            Ok(borrowed) => Some(borrowed),
-            Err(_) => None,
-        };
-
-        if let Some(borrowed) = borrowed.as_mut() {
-            borrowed.remove(&self.index);
-        }
-    }
-}
-
 pub struct ReqwestHttpClientBuilder {
     timeout: Option<Duration>,
 }
@@ -149,7 +135,7 @@ impl ReqwestHttpClientBuilder {
         self
     }
 
-    pub fn build(self, borrowed: Arc<RwLock<HashSet<usize>>>, index: usize) -> ReqwestHttpClient {
+    pub fn build(self, index: usize) -> ReqwestHttpClient {
         let mut client_builder = Client::builder();
         match self.timeout {
             Some(timeout) => client_builder = client_builder.timeout(timeout),
@@ -160,11 +146,7 @@ impl ReqwestHttpClientBuilder {
         }
 
         let client = client_builder.build().unwrap();
-        ReqwestHttpClient {
-            client,
-            borrowed,
-            index,
-        }
+        ReqwestHttpClient { client, index }
     }
 }
 
@@ -179,7 +161,12 @@ impl ReqwestHttpClientPool {
     }
 
     pub fn with_capacity(num_clients: usize) -> Self {
-        let clients = Vec::with_capacity(num_clients);
+        let mut clients = Vec::with_capacity(num_clients);
+
+        for i in 0..num_clients {
+            clients.push(Arc::new(ReqwestHttpClient::new().build(i)));
+        }
+
         let borrowed = Arc::new(RwLock::new(HashSet::new()));
 
         Self { clients, borrowed }
@@ -206,7 +193,7 @@ impl ReqwestHttpClientPool {
             let index = self.clients.len();
             borrowed_set.insert(index);
 
-            let client = ReqwestHttpClient::new().build(self.borrowed.clone(), index);
+            let client = ReqwestHttpClient::new().build(index);
             self.clients.push(Arc::new(client));
             index
         } else {
