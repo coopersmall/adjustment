@@ -64,7 +64,7 @@ pub fn json_parse(_metadata: TokenStream, input: TokenStream) -> TokenStream {
         let mut generics = generics.clone();
         generics.params.insert(
             0,
-            syn::GenericParam::Lifetime(syn::LifetimeDef::new(lifetime_ident.clone())),
+            syn::GenericParam::Lifetime(syn::LifetimeParam::new(lifetime_ident.clone())),
         );
 
         let input_with_lifetime = quote! {
@@ -80,4 +80,16 @@ pub fn json_parse(_metadata: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     output.into()
+}
+
+#[proc_macro_attribute]
+pub fn async_main(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as syn::ItemFn);
+
+    let expanded = quote! {
+        #[tokio::main]
+        #input
+    };
+
+    TokenStream::from(expanded)
 }

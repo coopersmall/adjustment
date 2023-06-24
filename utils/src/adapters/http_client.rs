@@ -4,11 +4,12 @@ use reqwest::{Client, Method};
 use thiserror::Error;
 
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 pub mod errors;
 pub mod headers;
+pub mod helpers;
 pub mod request;
 pub mod response;
 pub mod url;
@@ -172,7 +173,7 @@ impl ReqwestHttpClientPool {
         Self { clients, borrowed }
     }
 
-    pub async fn borrow_client(&mut self) -> Result<Arc<ReqwestHttpClient>, Arc<Error>> {
+    pub fn borrow_client(&mut self) -> Result<Arc<ReqwestHttpClient>, Arc<Error>> {
         let mut borrowed_set = self.borrowed.try_write().map_err(|err| {
             let poisoned_err = err.to_string();
             Arc::new(Error::new(
@@ -205,10 +206,10 @@ impl ReqwestHttpClientPool {
         Ok(self.clients[client_index].clone())
     }
 
-    pub async fn return_client(&mut self, client: Arc<ReqwestHttpClient>) {
+    pub fn return_client(&mut self, client: Arc<ReqwestHttpClient>) {
         let mut borrowed = match self.borrowed.try_write() {
             Ok(borrowed) => borrowed,
-            Err(_) => return,
+            Err(_) => todo!(),
         };
         borrowed.remove(&client.index);
     }

@@ -1,35 +1,29 @@
-use common::bitcoin::Bitcoin;
-use common::currency::Currency;
-use std::borrow::Cow;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
-use tokio;
-use tokio::sync::{futures, mpsc};
+use std::sync::Arc;
+use tokio::sync::mpsc;
 use utils::adapters::http_client::*;
-use utils::errors::{Error, ErrorCode, ErrorMeta};
+use utils::errors::{Error, ErrorCode};
 use utils::json::Parse;
-use utils::{async_main, spawn, spawn_async};
+use utils::{http_request, spawn_async};
 
 const NUM_THREADS: usize = 10;
 
-async_main! {
-    let url = Url::new("https://www.webhook.site", "/27acc74f-7f52-4cfc-abff-9ff4c3af5ca7")
-        .build();
+#[macros::async_main]
+pub async fn main() -> Result<(), Error> {
+    let url = Url::new("https://webhook.site")?
+        .add_path("27acc74f-7f52-4cfc-abff-9ff4c3af5ca7")
+        .build()?;
 
-    let request = HttpRequest::new(
-        url.as_ref(),
-        HttpMethod::GET,
-    ).build();
+    let request = Arc::new(http_request!(GET, url.as_ref()).build());
 
     let mut client_pool = ReqwestHttpClientPool::with_capacity(NUM_THREADS);
     let (tx, mut rx) = mpsc::channel::<Result<HttpResponse, Error>>(NUM_THREADS);
 
-    let client = match client_pool.borrow_client().await {
+    let client = match client_pool.borrow_client() {
         Ok(client) => client,
-        Err(err) => {
-            let request_err = Error::new("test", ErrorCode::Invalid).with_cause(err);
-            eprintln!("Error getting client: {:?}", request_err);
-            return;
+        Err(_) => {
+            let err = Error::new("test", ErrorCode::Invalid);
+            eprintln!("Error getting client: {:?}", err);
+            return Err(err);
         }
     };
 
@@ -44,19 +38,24 @@ async_main! {
                 let err = Error::new("test", ErrorCode::Invalid).with_cause(err);
                 eprintln!("Error sending result: {:?}", err);
             }
-        }
+        };
     }
 
     drop(tx);
-    client_pool.return_client(client).await;
+    client_pool.return_client(client);
 
     while let Some(result) = rx.recv().await {
         match result {
             Ok(response) => {
                 let json = &response.body().marshal().unwrap();
                 println!("{:?}", json)
-            },
-            Err(err) => println!("{:?}", err),
+            }
+            Err(err) => {
+                println!("{:?}", err);
+                return Err(err);
+            }
         }
     }
+
+    Ok(())
 }
