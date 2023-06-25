@@ -1,7 +1,6 @@
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-
-use std::collections::HashMap;
 
 use crate::errors::{Error, ErrorCode};
 
@@ -12,7 +11,7 @@ const URL_PATTERN: &str = r"^(https?://)?(www\.)?([\w-]+\.[a-z]+)(/.*)?(\?.*)?$"
 pub struct Url {
     base_url: Box<str>,
     path: Option<Box<str>>,
-    params: Option<HashMap<Box<str>, Box<str>>>,
+    params: Option<Vec<(Box<str>, Box<str>)>>,
 }
 
 impl Url {
@@ -54,22 +53,17 @@ impl Url {
 
     pub fn add_param(mut self, key: &str, value: &str) -> Self {
         if self.params.is_none() {
-            self.params = Some(HashMap::new());
+            self.params = Some(Vec::new());
         }
 
         let params = self.params.as_mut().unwrap();
-        params.insert(key.into(), value.into());
+        params.push((Self::encode_url(key).into(), Self::encode_url(value).into()));
 
         self
     }
 
-    pub fn set_params(mut self, params: HashMap<&str, &str>) -> Self {
-        self.params = Some(
-            params
-                .into_iter()
-                .map(|(k, v)| (k.into(), v.into()))
-                .collect(),
-        );
+    pub fn set_params(mut self, params: Vec<(Box<str>, Box<str>)>) -> Self {
+        self.params = Some(params);
         self
     }
 
@@ -106,6 +100,10 @@ impl Url {
 
         Ok(url.into())
     }
+
+    fn encode_url(url: &str) -> String {
+        utf8_percent_encode(url, NON_ALPHANUMERIC).to_string()
+    }
 }
 
 #[cfg(test)]
@@ -141,7 +139,7 @@ mod tests {
 
         assert_eq!(
             url,
-            "https://www.google.com/search/?q=rust&oq=rust&aqs=chrome..69i57j69i60l3j69i65.1053j0j7"
+            "https://www.google.com/search/?q=rust&oq=rust&aqs=chrome%2E%2E69i57j69i60l3j69i65%2E1053j0j7"
                 .into()
         );
     }

@@ -1,55 +1,18 @@
 use rand::Rng;
 use reqwest::{Client, Method};
-use thiserror::Error;
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-pub mod errors;
-pub mod helpers;
-pub mod request;
-pub mod response;
-pub mod url;
-
-pub use self::request::{HttpMethod, HttpRequest, HttpRequestBuilder};
-pub use self::response::HttpResponse;
-pub use self::url::Url;
+pub use crate::http::request::{HttpMethod, HttpRequest, HttpRequestBuilder};
+pub use crate::http::response::HttpResponse;
+pub use crate::http::url::Url;
 
 use crate::errors::{Error, ErrorCode};
 
 const DEFAULT_TIMEOUT_SECONDS: u64 = 30;
 const DEFAULT_POOL_SIZE: usize = 10;
-
-#[derive(Debug, Error)]
-pub enum HttpClientError {
-    #[error("Failed to connect: {0}")]
-    ConnectError(#[from] reqwest::Error),
-
-    #[error("Timeout occurred")]
-    TimeoutError,
-
-    #[error("Failed to parse response")]
-    ParseError,
-}
-
-impl From<HttpClientError> for Error {
-    fn from(err: HttpClientError) -> Self {
-        match err {
-            HttpClientError::ConnectError(err) => Error::new(
-                format!("Failed to connect to server: {}", err).as_str(),
-                ErrorCode::Internal,
-            ),
-            HttpClientError::TimeoutError => Error::new(
-                "Timeout occurred while connecting to server",
-                ErrorCode::Internal,
-            ),
-            HttpClientError::ParseError => {
-                Error::new("Failed to parse response from server", ErrorCode::Internal)
-            }
-        }
-    }
-}
 
 pub struct HttpClient {
     client: Client,
