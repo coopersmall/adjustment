@@ -1,13 +1,17 @@
 use rand::Rng;
 use reqwest::{Client, Method};
 
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, RwLock};
-use std::time::Duration;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 
-pub use crate::http::request::{HttpMethod, HttpRequest, HttpRequestBuilder};
-pub use crate::http::response::HttpResponse;
-pub use crate::http::url::Url;
+pub use crate::http::{
+    request::{HttpMethod, HttpRequest, HttpRequestBuilder},
+    response::HttpResponse,
+    url::Url,
+};
 
 use crate::errors::{Error, ErrorCode};
 
