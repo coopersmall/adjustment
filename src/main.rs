@@ -3,29 +3,25 @@ use tokio::sync::mpsc;
 use utils::adapters::http_client::*;
 use utils::errors::{Error, ErrorCode};
 use utils::json::Parse;
-use utils::{http_request, spawn_async};
+use utils::{http_headers, http_request, spawn_async, url};
 
 const NUM_THREADS: usize = 10;
+const BASE_URL: &str = "https://webhook.site";
+const PATH: &str = "27acc74f-7f52-4cfc-abff-9ff4c3af5ca7";
 
 #[macros::async_main]
 pub async fn main() -> Result<(), Error> {
-    let url = Url::new("https://webhook.site")?
-        .add_path("27acc74f-7f52-4cfc-abff-9ff4c3af5ca7")
-        .build()?;
+    let url = url!(BASE_URL, PATH);
+    let headers = http_headers! {
+        "Content-Type" => "application/json",
+    };
 
-    let request = Arc::new(http_request!(GET, url.as_ref()).build());
+    let request = Arc::new(http_request!(GET, &url, headers));
 
     let mut client_pool = ReqwestHttpClientPool::with_capacity(NUM_THREADS);
-    let (tx, mut rx) = mpsc::channel::<Result<HttpResponse, Error>>(NUM_THREADS);
+    let client = client_pool.borrow_client()?;
 
-    let client = match client_pool.borrow_client() {
-        Ok(client) => client,
-        Err(_) => {
-            let err = Error::new("test", ErrorCode::Invalid);
-            eprintln!("Error getting client: {:?}", err);
-            return Err(err);
-        }
-    };
+    let (tx, mut rx) = mpsc::channel::<Result<HttpResponse, Error>>(NUM_THREADS);
 
     for _ in 0..NUM_THREADS {
         let tx = tx.clone();

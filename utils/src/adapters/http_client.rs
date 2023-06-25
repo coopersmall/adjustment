@@ -173,13 +173,13 @@ impl ReqwestHttpClientPool {
         Self { clients, borrowed }
     }
 
-    pub fn borrow_client(&mut self) -> Result<Arc<ReqwestHttpClient>, Arc<Error>> {
+    pub fn borrow_client(&mut self) -> Result<Arc<ReqwestHttpClient>, Error> {
         let mut borrowed_set = self.borrowed.try_write().map_err(|err| {
             let poisoned_err = err.to_string();
-            Arc::new(Error::new(
+            Error::new(
                 format!("Failed to borrow client: {}", poisoned_err).as_str(),
                 ErrorCode::Internal,
-            ))
+            )
         })?;
 
         let available_clients: Vec<usize> = self

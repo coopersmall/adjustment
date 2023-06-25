@@ -63,18 +63,26 @@ impl HttpRequestBuilder {
 
     pub fn add_default_headers(&mut self) {
         if self.headers.is_none() {
-            self.headers = Some(HashMap::new());
+            self.headers = Some(Self::get_default_headers());
+        } else {
+            let mut headers = self.headers.take().unwrap();
+            let default_headers = Self::get_default_headers();
+            for (k, v) in default_headers {
+                if !headers.contains_key(&k) {
+                    headers.insert(k, v);
+                }
+            }
+            self.headers = Some(headers);
         }
+    }
 
-        let headers = self.headers.as_mut().unwrap();
-
-        if !headers.contains_key("User-Agent") {
-            headers.insert("User-Agent".into(), DEFAULT_USER_AGENT.into());
+    pub fn add_header(&mut self, key: &str, value: &str) {
+        if self.headers.is_none() {
+            self.headers = Some(Self::get_default_headers());
         }
-
-        if !headers.contains_key("Content-Type") {
-            headers.insert("Content-Type".into(), DEFAULT_CONTENT_TYPE.into());
-        }
+        let mut headers = self.headers.take().unwrap();
+        headers.insert(key.into(), value.into());
+        self.headers = Some(headers);
     }
 
     pub fn body(mut self, body: &str) -> Self {
@@ -83,12 +91,24 @@ impl HttpRequestBuilder {
     }
 
     pub fn build(self) -> HttpRequest {
+        let headers = match self.headers {
+            Some(headers) => headers,
+            None => Self::get_default_headers(),
+        };
+
         HttpRequest {
             method: self.method,
             url: self.url,
             agent: self.agent,
-            headers: self.headers,
+            headers: Some(headers),
             body: self.body,
         }
+    }
+
+    fn get_default_headers() -> HashMap<Box<str>, Box<str>> {
+        let mut headers = HashMap::new();
+        headers.insert("User-Agent".into(), DEFAULT_USER_AGENT.into());
+        headers.insert("Content-Type".into(), DEFAULT_CONTENT_TYPE.into());
+        headers
     }
 }

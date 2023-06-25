@@ -63,6 +63,16 @@ impl Url {
         self
     }
 
+    pub fn set_params(mut self, params: HashMap<&str, &str>) -> Self {
+        self.params = Some(
+            params
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+        );
+        self
+    }
+
     pub fn build(self) -> Result<Box<str>, Error> {
         let mut url = self.base_url.to_string();
 
