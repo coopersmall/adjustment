@@ -1,22 +1,19 @@
-use async_trait::async_trait;
 use rand::Rng;
 use reqwest::{Client, Method};
 use thiserror::Error;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 pub mod errors;
-pub mod headers;
 pub mod helpers;
 pub mod request;
 pub mod response;
 pub mod url;
 
-pub use self::headers::HttpHeaders;
 pub use self::request::{HttpMethod, HttpRequest, HttpRequestBuilder};
-pub use self::response::{HttpResponse, HttpResponseBuilder};
+pub use self::response::HttpResponse;
 pub use self::url::Url;
 
 use crate::errors::{Error, ErrorCode};
@@ -54,26 +51,19 @@ impl From<HttpClientError> for Error {
     }
 }
 
-// Create a trait for the HTTP client.
-#[async_trait]
-pub trait HttpClient {
-    async fn send_request(&self, request: Arc<HttpRequest>) -> Result<HttpResponse, Error>;
-}
-
-pub struct ReqwestHttpClient {
+pub struct HttpClient {
     client: Client,
     index: usize,
 }
 
-impl ReqwestHttpClient {
+impl HttpClient {
     pub fn new() -> ReqwestHttpClientBuilder {
         ReqwestHttpClientBuilder::new()
     }
 }
 
-#[async_trait]
-impl HttpClient for ReqwestHttpClient {
-    async fn send_request(&self, request: Arc<HttpRequest>) -> Result<HttpResponse, Error> {
+impl HttpClient {
+    pub async fn send_request(&self, request: Arc<HttpRequest>) -> Result<HttpResponse, Error> {
         let method = match request.method {
             HttpMethod::GET => Method::GET,
             HttpMethod::POST => Method::POST,
@@ -111,14 +101,34 @@ impl HttpClient for ReqwestHttpClient {
         };
 
         let status_code = response.status().as_u16();
-        let headers = response.headers().to_owned();
-        let body = response.text().await.or(Err(HttpClientError::ParseError))?;
 
-        Ok(HttpResponseBuilder::new()
-            .status_code(status_code)
-            .headers(HttpHeaders::from(headers))
-            .body(body)
-            .build())
+        let headers = response.headers().to_owned();
+        let headers = headers
+            .iter()
+            .fold(HashMap::new(), |mut headers, (key, value)| {
+                let value = match value.to_str() {
+                    Ok(value) => value,
+                    Err(_) => return headers,
+                };
+                headers.insert(key.as_str(), value);
+                headers
+            });
+
+        let body = match response.text().await {
+            Ok(body) => body,
+            Err(err) => {
+                return Err(Error::new(
+                    format!("Failed to read response body: {}", err).as_str(),
+                    ErrorCode::Internal,
+                ));
+            }
+        };
+
+        Ok(HttpResponse::new(
+            status_code,
+            body.as_str(),
+            headers.to_owned(),
+        ))
     }
 }
 
@@ -136,7 +146,7 @@ impl ReqwestHttpClientBuilder {
         self
     }
 
-    pub fn build(self, index: usize) -> ReqwestHttpClient {
+    pub fn build(self, index: usize) -> HttpClient {
         let mut client_builder = Client::builder();
         match self.timeout {
             Some(timeout) => client_builder = client_builder.timeout(timeout),
@@ -147,16 +157,16 @@ impl ReqwestHttpClientBuilder {
         }
 
         let client = client_builder.build().unwrap();
-        ReqwestHttpClient { client, index }
+        HttpClient { client, index }
     }
 }
 
-pub struct ReqwestHttpClientPool {
-    clients: Vec<Arc<ReqwestHttpClient>>,
+pub struct HttpClientPool {
+    clients: Vec<Arc<HttpClient>>,
     borrowed: Arc<RwLock<HashSet<usize>>>,
 }
 
-impl ReqwestHttpClientPool {
+impl HttpClientPool {
     pub fn new() -> Self {
         Self::with_capacity(DEFAULT_POOL_SIZE)
     }
@@ -165,7 +175,7 @@ impl ReqwestHttpClientPool {
         let mut clients = Vec::with_capacity(num_clients);
 
         for i in 0..num_clients {
-            clients.push(Arc::new(ReqwestHttpClient::new().build(i)));
+            clients.push(Arc::new(HttpClient::new().build(i)));
         }
 
         let borrowed = Arc::new(RwLock::new(HashSet::new()));
@@ -173,7 +183,7 @@ impl ReqwestHttpClientPool {
         Self { clients, borrowed }
     }
 
-    pub fn borrow_client(&mut self) -> Result<Arc<ReqwestHttpClient>, Error> {
+    pub fn borrow_client<'a>(&'a mut self) -> Result<Arc<HttpClient>, Error> {
         let mut borrowed_set = self.borrowed.try_write().map_err(|err| {
             let poisoned_err = err.to_string();
             Error::new(
@@ -194,7 +204,7 @@ impl ReqwestHttpClientPool {
             let index = self.clients.len();
             borrowed_set.insert(index);
 
-            let client = ReqwestHttpClient::new().build(index);
+            let client = HttpClient::new().build(index);
             self.clients.push(Arc::new(client));
             index
         } else {
@@ -206,7 +216,7 @@ impl ReqwestHttpClientPool {
         Ok(self.clients[client_index].clone())
     }
 
-    pub fn return_client(&mut self, client: Arc<ReqwestHttpClient>) {
+    pub fn return_client(&mut self, client: Arc<HttpClient>) {
         let mut borrowed = match self.borrowed.try_write() {
             Ok(borrowed) => borrowed,
             Err(_) => todo!(),

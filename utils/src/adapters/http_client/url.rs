@@ -107,3 +107,42 @@ impl Url {
         Ok(url.into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_url() {
+        let url = Url::new("https://www.google.com").unwrap();
+        assert_eq!(url.build().unwrap(), "https://www.google.com/".into());
+
+        let url = Url::new("https://www.google.com").unwrap();
+        let url = url.add_path("search").build().unwrap();
+        assert_eq!(url, "https://www.google.com/search/".into());
+
+        let url = Url::new("https://www.google.com").unwrap();
+        let url = url
+            .add_path("search")
+            .add_param("q", "rust")
+            .build()
+            .unwrap();
+
+        assert_eq!(url, "https://www.google.com/search/?q=rust".into());
+
+        let url = Url::new("https://www.google.com").unwrap();
+        let url = url
+            .add_path("search")
+            .add_param("q", "rust")
+            .add_param("oq", "rust")
+            .add_param("aqs", "chrome..69i57j69i60l3j69i65.1053j0j7")
+            .build()
+            .unwrap();
+
+        assert_eq!(
+            url,
+            "https://www.google.com/search/?q=rust&oq=rust&aqs=chrome..69i57j69i60l3j69i65.1053j0j7"
+                .into()
+        );
+    }
+}

@@ -74,3 +74,41 @@ macro_rules! http_headers {
         }
     };
 }
+
+#[macro_export]
+macro_rules! send_request {
+    ($request:expr) => {{
+        let client = HttpClient::new().build(0);
+        let future = client.send_request($request);
+        tokio::runtime::Runtime::new().unwrap().block_on(future)
+    }};
+
+    ($request:expr, $pool:expr) => {{
+        let mut pool = match $pool.lock() {
+            Ok(pool) => pool,
+            Err(_) => return Err(Error::new("Failed to lock pool", ErrorCode::Internal)),
+        };
+
+        let client = match pool.borrow_client() {
+            Ok(client) => client,
+            Err(_) => return Err(Error::new("Failed to borrow client", ErrorCode::Internal)),
+        };
+
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let request = $request.clone();
+        let thread_client = client.clone();
+
+        tokio::spawn(async move {
+            let client = thread_client.clone();
+            let response = client.send_request(request).await;
+            let _ = tx.send(response);
+        });
+
+        pool.return_client(client);
+
+        Box::pin(async move {
+            rx.await
+                .map_err(|_| Error::new("Failed to send request", ErrorCode::Internal))?
+        })
+    }};
+}

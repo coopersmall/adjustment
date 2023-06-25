@@ -1,9 +1,10 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
+
 use utils::adapters::http_client::*;
 use utils::errors::{Error, ErrorCode};
 use utils::json::Parse;
-use utils::{http_headers, http_request, spawn_async, url};
+use utils::*;
 
 const NUM_THREADS: usize = 10;
 const BASE_URL: &str = "https://webhook.site";
@@ -15,35 +16,35 @@ pub async fn main() -> Result<(), Error> {
     let headers = http_headers! {
         "Content-Type" => "application/json",
     };
-
     let request = Arc::new(http_request!(GET, &url, headers));
 
-    let mut client_pool = ReqwestHttpClientPool::with_capacity(NUM_THREADS);
-    let client = client_pool.borrow_client()?;
-
+    let client_pool = Arc::new(Mutex::new(HttpClientPool::with_capacity(NUM_THREADS)));
     let (tx, mut rx) = mpsc::channel::<Result<HttpResponse, Error>>(NUM_THREADS);
 
     for _ in 0..NUM_THREADS {
-        let tx = tx.clone();
+        let pool = client_pool.clone();
         let request = request.clone();
-        let client = client.clone();
+        let tx = tx.clone();
 
         spawn_async! {
-            let response = client.send_request(request).await;
+            let response = send_request!(request, pool).await;
             if let Err(err) = tx.send(response).await {
-                let err = Error::new("test", ErrorCode::Invalid).with_cause(err);
-                eprintln!("Error sending result: {:?}", err);
+                return Err(Error::new(
+                    format!("Failed to send response: {}", err).as_str(),
+                    ErrorCode::Internal,
+                ).with_cause(err));
             }
+
+            Ok::<(), Error>(())
         };
     }
 
     drop(tx);
-    client_pool.return_client(client);
 
     while let Some(result) = rx.recv().await {
         match result {
             Ok(response) => {
-                let json = &response.body().marshal().unwrap();
+                let json = &response.marshal().unwrap();
                 println!("{:?}", json)
             }
             Err(err) => {
