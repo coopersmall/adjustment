@@ -41,7 +41,7 @@ pub fn deserializeable(_metadata: TokenStream, input: TokenStream) -> TokenStrea
 }
 
 #[proc_macro_attribute]
-pub fn json_parse(_metadata: TokenStream, input: TokenStream) -> TokenStream {
+pub fn json(_metadata: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let generics = &input.generics;
 

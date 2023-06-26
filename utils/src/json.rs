@@ -2,12 +2,42 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::{Error, ErrorCode};
 
+/// Macro for defining JSON literals in Rust code
+/// This macro is a wrapper around the serde_json::json! macro
+///
+/// # Arguments
+/// * `tokens` - JSON tokens
+///
+/// # Example
+/// ```
+/// fn main() {
+/// use utils::json;
+///
+/// let data = json!({
+///     "name": "John Doe",
+///     "age": 30,
+///     "city": "New York"
+/// });
+///
+/// assert_eq!(data["name"], "John Doe");
+/// assert_eq!(data["age"], 30);
+/// assert_eq!(data["city"], "New York");
+/// }
+/// ```
+///
+#[macro_export]
+macro_rules! json {
+    ($($tokens:tt)*) => {
+        serde_json::json!($($tokens)*)
+    };
+}
+
 /// Trait for parsing JSON strings into structs and serializing structs into JSON strings
 ///
 /// This trait is implemented for all structs that use the `#[json_parse]` macro from the macros crate
 /// Import this trait to use the `from_json` and `to_json` methods on structs
 ///
-pub trait Parse<'a, T>: Serialize + Deserialize<'a> {
+pub trait JSON<'a, T>: Serialize + Deserialize<'a> {
     /// Parse a JSON string into a struct
     ///
     /// # Arguments
@@ -16,10 +46,11 @@ pub trait Parse<'a, T>: Serialize + Deserialize<'a> {
     /// # Example
     /// ```
     /// use serde::{Deserialize, Serialize};
-    /// use serde_json::json;
     /// use utils::json::Parse;
+    /// use utils::json;
     ///
-    /// //Structs outside of the utils crate should use `#[json_parse]` from the macros crate
+    /// // Any object outside of the utils crate SHOULD NOT USE `#[derive(Serialize, Deserialize)]`
+    /// // Instead objects should use `#[json_parse]` from the macros crate
     /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
     /// struct Person {
     ///    name: String,
@@ -63,10 +94,11 @@ pub trait Parse<'a, T>: Serialize + Deserialize<'a> {
     /// # Example
     /// ```
     /// use serde::{Deserialize, Serialize};
-    /// use serde_json::json;
     /// use utils::json::Parse;
+    /// use utils::json;
     ///
-    /// //Structs outside of the utils crate should use `#[json_parse]` from the macros crate
+    /// // Any object outside of the utils crate SHOULD NOT USE `#[derive(Serialize, Deserialize)]`
+    /// // Instead objects should use `#[json_parse]` from the macros crate
     /// #[derive(Serialize, Deserialize, Debug)]
     /// struct Person {
     ///   name: String,
@@ -103,4 +135,4 @@ pub trait Parse<'a, T>: Serialize + Deserialize<'a> {
     }
 }
 
-impl<'a, T> Parse<'a, T> for T where T: Serialize + Deserialize<'a> {}
+impl<'a, T> JSON<'a, T> for T where T: Serialize + Deserialize<'a> {}
