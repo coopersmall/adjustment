@@ -135,6 +135,10 @@ pub enum ErrorCode {
     Unavailable,
     /// There was a conflict with the requested resource.
     Conflict,
+    /// There was an error parsing JSON.
+    JsonParse,
+    /// There was an error serializing JSON.
+    JsonSerialize,
     /// The operation timed out.
     Timeout,
     /// An unknown error occurred.
@@ -152,6 +156,8 @@ impl Display for ErrorCode {
             ErrorCode::Internal => write!(f, "internal"),
             ErrorCode::Unavailable => write!(f, "unavailable"),
             ErrorCode::Conflict => write!(f, "conflict"),
+            ErrorCode::JsonParse => write!(f, "json_parse"),
+            ErrorCode::JsonSerialize => write!(f, "json_serialize"),
             ErrorCode::Timeout => write!(f, "timeout"),
             ErrorCode::Unknown => write!(f, "unknown"),
         }

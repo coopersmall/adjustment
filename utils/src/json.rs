@@ -1,16 +1,105 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Error;
 
+use crate::errors::{Error, ErrorCode};
+
+/// Trait for parsing JSON strings into structs and serializing structs into JSON strings
+///
+/// This trait is implemented for all structs that use the `#[json_parse]` macro from the macros crate
+/// Import this trait to use the `from_json` and `to_json` methods on structs
+///
 pub trait Parse<'a, T>: Serialize + Deserialize<'a> {
-    fn unmarshal(data: &'a str) -> Result<Self, Error>
+    /// Parse a JSON string into a struct
+    ///
+    /// # Arguments
+    /// * `data` - JSON string
+    ///
+    /// # Example
+    /// ```
+    /// use serde::{Deserialize, Serialize};
+    /// use serde_json::json;
+    /// use utils::json::Parse;
+    ///
+    /// //Structs outside of the utils crate should use `#[json_parse]` from the macros crate
+    /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    /// struct Person {
+    ///    name: String,
+    ///    phones: Vec<String>,
+    /// }
+    ///
+    /// let data = json!({
+    ///    "name": "John Doe",
+    ///    "phones": [
+    ///    "+44 1234567",
+    ///    "+44 2345678"
+    ///    ]
+    /// });
+    ///
+    /// let test: Person = Person::from_json(&data.to_string()).unwrap();
+    /// let expected = Person {
+    ///   name: "John Doe".to_string(),
+    ///   phones: vec!["+44 1234567".to_string(), "+44 2345678".to_string()],
+    /// };
+    ///
+    /// assert_eq!(test, expected);
+    /// ```
+    ///
+    /// # Errors
+    /// Returns an error with JsonParse error code if the JSON string cannot be parsed
+    ///
+    fn from_json(data: &'a str) -> Result<Self, Error>
     where
         Self: Sized,
     {
-        serde_json::from_str(data)
+        match serde_json::from_str(data) {
+            Ok(v) => Ok(v),
+            Err(err) => {
+                Err(Error::new("Failed to parse JSON", ErrorCode::JsonParse).with_cause(err))
+            }
+        }
     }
 
-    fn marshal(&'a self) -> Result<String, Error> {
-        serde_json::to_string(self)
+    /// Convert a struct into a JSON string
+    ///
+    /// # Example
+    /// ```
+    /// use serde::{Deserialize, Serialize};
+    /// use serde_json::json;
+    /// use utils::json::Parse;
+    ///
+    /// //Structs outside of the utils crate should use `#[json_parse]` from the macros crate
+    /// #[derive(Serialize, Deserialize, Debug)]
+    /// struct Person {
+    ///   name: String,
+    ///   phones: Vec<String>,
+    /// }
+    ///
+    /// let test = Person {
+    ///   name: "John Doe".to_string(),
+    ///   phones: vec!["+44 1234567".to_string(), "+44 2345678".to_string()],
+    /// };
+    ///
+    /// let data = test.to_json().unwrap();
+    /// let expected = json!({
+    ///   "name": "John Doe",
+    ///   "phones": [
+    ///   "+44 1234567",
+    ///   "+44 2345678"
+    /// ]
+    /// });
+    ///
+    /// assert_eq!(data, expected.to_string());
+    /// ```
+    ///
+    /// # Errors
+    /// Returns an error with JsonSerialize error code if the struct cannot be serialized
+    ///
+    fn to_json(&'a self) -> Result<String, Error> {
+        match serde_json::to_string(self) {
+            Ok(v) => Ok(v),
+            Err(err) => Err(
+                Error::new("Failed to serialize JSON", ErrorCode::JsonSerialize).with_cause(err),
+            ),
+        }
     }
 }
 
