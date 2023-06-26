@@ -9,7 +9,7 @@ use name::CurrencyName;
 use symbol::CurrencySymbol;
 
 #[derive(Debug, Clone, PartialEq)]
-#[json_parse]
+#[json]
 pub struct Currency {
     code: CurrencyCode,
     name: CurrencyName,

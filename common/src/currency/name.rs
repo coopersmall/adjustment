@@ -1,10 +1,8 @@
-use macros::*;
-
 use super::code::CurrencyCode;
 use super::symbol::CurrencySymbol;
 
 #[derive(Debug, Clone, PartialEq)]
-#[json_parse]
+#[macros::json]
 pub enum CurrencyName {
     Dollar,
     Bitcoin,
