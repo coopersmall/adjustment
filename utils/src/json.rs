@@ -1,3 +1,92 @@
+//!
+//!      _ ____   ___  _   _
+//!     | / ___| / _ \| \ | |
+//!  _  | \___ \| | | |  \| |
+//! | |_| |___) | |_| | |\  |
+//!  \___/|____/ \___/|_| \_|
+//!
+//! # JSON
+//!
+//! This module provides a macro for defining JSON literals in Rust code and a trait for parsing JSON strings into structs and serializing structs into JSON strings
+//!
+//! ## JSON Macro
+//! The `json!` macro is a wrapper around the serde_json::json! macro
+//! ```
+//! use utils::json;
+//!
+//! let data = json!({
+//!    "name": "John Doe",
+//!    "age": 30,
+//!    "city": "New York"
+//! });
+//!
+//! assert_eq!(data["name"], "John Doe");
+//! assert_eq!(data["age"], 30);
+//! assert_eq!(data["city"], "New York");
+//!    ```
+//!
+//! ## JSON Trait
+//! The `JSON` trait is implemented for all structs that use the `#[json_parse]` macro from the macros crate
+//! ```
+//! use serde::{Deserialize, Serialize};
+//!
+//! use utils::json::JSON;
+//! use utils::json;
+//!
+//! #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+//! pub struct Person {
+//!   name: String,
+//!   age: u8,
+//!   city: String,
+//! }
+//!
+//! impl Person {
+//!    pub fn new(name: String, age: u8, city: String) -> Self {
+//!      Self { name, age, city }
+//!    }
+//! }
+//!
+//! // Create a JSON object from a struct
+//! let data = json!({
+//!    "name": "John Doe",
+//!    "age": 30,
+//!    "city": "New York"
+//! });
+//!
+//! let test: Person = Person::from_json(&data.to_string()).unwrap();
+//! let expected = Person::new("John Doe".to_string(), 30, "New York".to_string());
+//!
+//! assert_eq!(test, expected);
+//!
+//! let test = test.to_json().unwrap();
+//! let expected = r#"{"name":"John Doe","age":30,"city":"New York"}"#;
+//! assert_eq!(test, expected);
+//!
+//! // Error handling
+//! // Returns an error with JsonParse error code if the JSON string cannot be parsed
+//! use utils::errors::{Error, ErrorCode};
+//!
+//! let data = json!({
+//!   "name": "John Doe",
+//!   "age": "30",
+//!   "city": "New York"
+//! });
+//!
+//! let test = match Person::from_json(&data.to_string()) {
+//!   Ok(_) => !unreachable!(),
+//!   Err(e) => e,
+//! };
+//!
+//! let expected = Error::new(
+//!   "Failed to parse JSON",
+//!   ErrorCode::JsonParse
+//! );
+//!
+//! assert_eq!(test.message(), expected.message());
+//! assert_eq!(test.code(), expected.code());
+//! ```
+//!
+
 use serde::{Deserialize, Serialize};
 
 use crate::errors::{Error, ErrorCode};
@@ -46,7 +135,7 @@ pub trait JSON<'a, T>: Serialize + Deserialize<'a> {
     /// # Example
     /// ```
     /// use serde::{Deserialize, Serialize};
-    /// use utils::json::Parse;
+    /// use utils::json::JSON;
     /// use utils::json;
     ///
     /// // Any object outside of the utils crate SHOULD NOT USE `#[derive(Serialize, Deserialize)]`
@@ -94,7 +183,7 @@ pub trait JSON<'a, T>: Serialize + Deserialize<'a> {
     /// # Example
     /// ```
     /// use serde::{Deserialize, Serialize};
-    /// use utils::json::Parse;
+    /// use utils::json::JSON;
     /// use utils::json;
     ///
     /// // Any object outside of the utils crate SHOULD NOT USE `#[derive(Serialize, Deserialize)]`
