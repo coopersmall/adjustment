@@ -48,8 +48,8 @@
 //!     // New errors are transient by default
 //!     assert!(error.is_transient());
 //!
-//!     // Fatal errors should be be marked as non-transient
-//!     let error = Error::permanent("Something went wrong", ErrorCode::Internal);
+//!     // Fatal errors should be created using `permanent`
+//!     let error = Error::permanent("Something went wrong", ErrorCode::Unknown);
 //!     assert!(!error.is_transient());
 //! }
 //! ```
