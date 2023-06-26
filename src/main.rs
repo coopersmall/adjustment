@@ -3,7 +3,7 @@ use tokio::sync::mpsc;
 
 use utils::adapters::http_client::*;
 use utils::errors::{Error, ErrorCode};
-use utils::json::Parse;
+use utils::json::JSON;
 use utils::*;
 
 const NUM_THREADS: usize = 10;
@@ -45,7 +45,7 @@ pub async fn main() -> Result<(), Error> {
     while let Some(result) = rx.recv().await {
         match result {
             Ok(response) => {
-                let json = &response.marshal().unwrap();
+                let json = &response.to_json().unwrap();
                 println!("{:?}", json)
             }
             Err(err) => {
