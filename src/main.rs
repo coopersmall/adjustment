@@ -26,17 +26,18 @@ pub async fn main() -> Result<(), Error> {
         let request = request.clone();
         let tx = tx.clone();
 
-        spawn_async! {
-            let response = send_request!(request, pool).await;
+        spawn!(async move {
+            let response = send_request!(pool, request).await;
             if let Err(err) = tx.send(response).await {
                 return Err(Error::new(
                     format!("Failed to send response: {}", err).as_str(),
                     ErrorCode::Internal,
-                ).with_cause(err));
+                )
+                .with_cause(err));
             }
 
             Ok::<(), Error>(())
-        };
+        });
     }
 
     drop(tx);

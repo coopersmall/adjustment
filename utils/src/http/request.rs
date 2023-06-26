@@ -22,6 +22,20 @@ pub struct HttpRequest {
 }
 
 impl HttpRequest {
+    /// Creates a new `HttpRequestBuilder` with the specified URL and method.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The URL for the HTTP request.
+    /// * `method` - The HTTP method for the request.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::{HttpRequest, HttpMethod};
+    ///
+    /// let request = HttpRequest::new("https://example.com", HttpMethod::GET);
+    /// ```
     pub fn new(url: &str, method: HttpMethod) -> HttpRequestBuilder {
         HttpRequestBuilder::new(url, method)
     }
@@ -46,11 +60,43 @@ impl HttpRequestBuilder {
         }
     }
 
+    /// Sets the agent for the HTTP request.
+    ///
+    /// # Arguments
+    ///
+    /// * `agent` - The user agent string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::{HttpRequest, HttpMethod};
+    ///
+    /// let request = HttpRequest::new("https://example.com", HttpMethod::GET)
+    ///     .agent("MyAgent/1.0");
+    /// ```
     pub fn agent(mut self, agent: &str) -> Self {
         self.agent = agent.into();
         self
     }
 
+    /// Sets the headers for the HTTP request.
+    ///
+    /// # Arguments
+    ///
+    /// * `headers` - A HashMap of headers, where the keys and values are strings.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::{HttpRequest, HttpMethod};
+    /// use std::collections::HashMap;
+    ///
+    /// let mut headers = HashMap::new();
+    /// headers.insert("Authorization", "Bearer my_token");
+    ///
+    /// let request = HttpRequest::new("https://example.com", HttpMethod::GET)
+    ///     .headers(headers);
+    /// ```
     pub fn headers(mut self, headers: HashMap<&str, &str>) -> Self {
         self.headers = Some(
             headers
@@ -61,6 +107,16 @@ impl HttpRequestBuilder {
         self
     }
 
+    /// Adds default headers to the HTTP request if no headers have been set.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::{HttpRequest, HttpMethod};
+    ///
+    /// let request = HttpRequest::new("https://example.com", HttpMethod::GET)
+    ///     .add_default_headers();
+    /// ```
     pub fn add_default_headers(&mut self) {
         if self.headers.is_none() {
             self.headers = Some(Self::get_default_headers());
@@ -76,6 +132,21 @@ impl HttpRequestBuilder {
         }
     }
 
+    /// Adds a header to the HTTP request.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The header key.
+    /// * `value` - The header value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::{HttpRequest, HttpMethod};
+    ///
+    /// let request = HttpRequest::new("https://example.com", HttpMethod::GET)
+    ///     .add_header("Authorization", "Bearer my_token");
+    /// ```
     pub fn add_header(&mut self, key: &str, value: &str) {
         if self.headers.is_none() {
             self.headers = Some(Self::get_default_headers());
@@ -85,11 +156,35 @@ impl HttpRequestBuilder {
         self.headers = Some(headers);
     }
 
+    /// Sets the body for the HTTP request.
+    ///
+    /// # Arguments
+    ///
+    /// * `body` - The request body as a string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::{HttpRequest, HttpMethod};
+    ///
+    /// let request = HttpRequest::new("https://example.com", HttpMethod::POST)
+    ///     .body("{\"name\":\"John\"}");
+    /// ```
     pub fn body(mut self, body: &str) -> Self {
         self.body = Some(body.into());
         self
     }
 
+    /// Builds the `HttpRequest` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::{HttpRequest, HttpMethod};
+    ///
+    /// let request = HttpRequest::new("https://example.com", HttpMethod::GET)
+    ///     .build();
+    /// ```
     pub fn build(self) -> HttpRequest {
         let headers = match self.headers {
             Some(headers) => headers,

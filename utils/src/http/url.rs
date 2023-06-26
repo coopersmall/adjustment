@@ -15,6 +15,24 @@ pub struct Url {
 }
 
 impl Url {
+    /// Creates a new `Url` instance with the provided base URL.
+    ///
+    /// # Arguments
+    ///
+    /// * `base_url` - The base URL string.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self, Error>` - The `Url` instance if the base URL is valid, otherwise an `Error` indicating the reason.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::Url;
+    ///
+    /// let url = Url::new("https://www.google.com");
+    /// assert!(url.is_ok());
+    /// ```
     pub fn new(base_url: &str) -> Result<Self, Error> {
         let re = Regex::new(BASE_URL_PATTERN).unwrap();
         if !re.is_match(base_url) {
@@ -36,6 +54,25 @@ impl Url {
         })
     }
 
+    /// Adds a path segment to the URL.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path segment to add.
+    ///
+    /// # Returns
+    ///
+    /// * `Self` - The modified `Url` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::Url;
+    ///
+    /// let url = Url::new("https://www.google.com")
+    ///     .unwrap()
+    ///     .add_path("search");
+    /// ```
     pub fn add_path(mut self, path: &str) -> Self {
         let mut path = path.to_string();
 
@@ -51,6 +88,26 @@ impl Url {
         self
     }
 
+    /// Adds a query parameter to the URL.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The parameter key.
+    /// * `value` - The parameter value.
+    ///
+    /// # Returns
+    ///
+    /// * `Self` - The modified `Url` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::Url;
+    ///
+    /// let url = Url::new("https://www.google.com")
+    ///     .unwrap()
+    ///     .add_param("q", "rust");
+    /// ```
     pub fn add_param(mut self, key: &str, value: &str) -> Self {
         if self.params.is_none() {
             self.params = Some(Vec::new());
@@ -62,11 +119,54 @@ impl Url {
         self
     }
 
+    /// Sets the query parameters of the URL.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - The vector of parameter tuples (key, value).
+    ///
+    /// # Returns
+    ///
+    /// * `Self` - The modified `Url` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::Url;
+    ///
+    /// let params: Vec<(Box<str>, Box<str>)> = vec![
+    ///    ("q".into(), "rust".into()),
+    ///    ("oq".into(), "rust".into()),
+    ///    ("aqs".into(), "chrome..69i57j69i60l3j69i65l2j69i60.1143j0j7".into()),
+    /// ];
+    ///
+    /// let url = Url::new("https://www.google.com")
+    ///     .unwrap()
+    ///     .set_params(params);
+    /// ```
     pub fn set_params(mut self, params: Vec<(Box<str>, Box<str>)>) -> Self {
         self.params = Some(params);
         self
     }
 
+    /// Builds the final URL string.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Box<str>, Error>` - The URL string if it is valid, otherwise an `Error` indicating the reason.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::http::Url;
+    ///
+    /// let url = Url::new("https://www.google.com")
+    ///     .unwrap()
+    ///     .add_path("search")
+    ///     .add_param("q", "rust")
+    ///     .build();
+    /// assert!(url.is_ok());
+    /// ```
     pub fn build(self) -> Result<Box<str>, Error> {
         let mut url = self.base_url.to_string();
 
