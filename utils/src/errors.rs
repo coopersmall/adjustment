@@ -670,4 +670,3 @@ impl<'de> Deserialize<'de> for Error {
         )
     }
 }
-
