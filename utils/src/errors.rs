@@ -5,7 +5,6 @@ use std::{
     collections::HashMap,
     error::Error as StdError,
     fmt::{Display, Formatter},
-    rc::Rc,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -39,7 +38,7 @@ impl Display for ErrorCode {
     }
 }
 
-pub struct ErrorMeta(HashMap<Rc<str>, Rc<str>>);
+pub struct ErrorMeta(HashMap<Box<str>, Box<str>>);
 
 impl ErrorMeta {
     pub fn new() -> ErrorMetaBuilder {
@@ -53,19 +52,19 @@ impl Default for ErrorMeta {
     }
 }
 
-impl From<HashMap<Rc<str>, Rc<str>>> for ErrorMeta {
-    fn from(meta: HashMap<Rc<str>, Rc<str>>) -> Self {
+impl From<HashMap<Box<str>, Box<str>>> for ErrorMeta {
+    fn from(meta: HashMap<Box<str>, Box<str>>) -> Self {
         ErrorMeta(meta)
     }
 }
 
-impl Into<HashMap<Rc<str>, Rc<str>>> for ErrorMeta {
-    fn into(self) -> HashMap<Rc<str>, Rc<str>> {
+impl Into<HashMap<Box<str>, Box<str>>> for ErrorMeta {
+    fn into(self) -> HashMap<Box<str>, Box<str>> {
         self.0
     }
 }
 
-pub struct ErrorMetaBuilder(HashMap<Rc<str>, Rc<str>>);
+pub struct ErrorMetaBuilder(HashMap<Box<str>, Box<str>>);
 
 impl ErrorMetaBuilder {
     fn new() -> Self {
@@ -77,18 +76,18 @@ impl ErrorMetaBuilder {
         self
     }
 
-    pub fn build(&mut self) -> Rc<HashMap<Rc<str>, Rc<str>>> {
-        Rc::new(std::mem::take(&mut self.0))
+    pub fn build(&mut self) -> Box<HashMap<Box<str>, Box<str>>> {
+        Box::new(std::mem::take(&mut self.0))
     }
 }
 
 #[derive(Debug, Error)]
 pub struct Error {
-    message: Rc<str>,
+    message: Box<str>,
     code: ErrorCode,
-    pub meta: Option<Rc<HashMap<Rc<str>, Rc<str>>>>,
+    pub meta: Option<Box<HashMap<Box<str>, Box<str>>>>,
     is_transient: bool,
-    source: Option<Box<dyn StdError>>,
+    source: Option<Box<dyn StdError + Send + Sync>>,
 }
 
 impl Error {
@@ -114,12 +113,15 @@ impl Error {
 }
 
 impl Error {
-    pub fn with_cause(mut self, cause: Box<dyn StdError>) -> Self {
-        self.source = Some(cause);
+    pub fn with_cause<T>(mut self, cause: T) -> Self
+    where
+        T: StdError + Send + Sync + 'static,
+    {
+        self.source = Some(Box::new(cause));
         self
     }
 
-    pub fn with_meta(mut self, meta: Rc<HashMap<Rc<str>, Rc<str>>>) -> Self {
+    pub fn with_meta(mut self, meta: Box<HashMap<Box<str>, Box<str>>>) -> Self {
         self.meta = Some(meta.clone());
         self
     }
@@ -128,7 +130,7 @@ impl Error {
         self.source.as_ref().map(|e| format!("{:?}", e))
     }
 
-    pub fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    pub fn source(&self) -> Option<&(dyn std::error::Error + Send + Sync + 'static)> {
         self.source.as_ref().map(|e| e.as_ref())
     }
 }

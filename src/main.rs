@@ -1,61 +1,59 @@
-use common::bitcoin::Bitcoin;
-use common::currency::Currency;
-use utils::errors::{Error, ErrorCode, ErrorMeta};
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
+
+use utils::adapters::http_client::*;
+use utils::errors::{Error, ErrorCode};
 use utils::json::Parse;
+use utils::*;
 
-fn main() {
-    let error_meta = ErrorMeta::new()
-        .add("Invalid bitcoin", "help")
-        .add("Invalid eth", "help")
-        .build();
+const NUM_THREADS: usize = 10;
+const BASE_URL: &str = "https://webhook.site";
+const PATH: &str = "27acc74f-7f52-4cfc-abff-9ff4c3af5ca7";
 
-    let result = Currency::new()
-        .name("Dollars")
-        .symbol("$")
-        .code("USD")
-        .build();
-
-    let currency: Currency = match result {
-        Ok(currency) => currency,
-        Err(err) => {
-            let invalid_error = Error::new(err, ErrorCode::Invalid).with_meta(error_meta.clone());
-            let wrapped_error = Error::new("Something", ErrorCode::Invalid)
-                .with_cause(Box::new(invalid_error))
-                .with_meta(error_meta.clone());
-            println!("Error: {:?}", wrapped_error.source());
-            return;
-        }
+#[macros::async_main]
+pub async fn main() -> Result<(), Error> {
+    let url = url!(BASE_URL, PATH);
+    let headers = http_headers! {
+        "Content-Type" => "application/json",
     };
+    let request = Arc::new(http_request!(GET, &url, headers));
 
-    println!("Currency: {:?}", currency.marshal());
+    let client_pool = Arc::new(Mutex::new(HttpClientPool::with_capacity(NUM_THREADS)));
+    let (tx, mut rx) = mpsc::channel::<Result<HttpResponse, Error>>(NUM_THREADS);
 
-    let currency_code = currency.code();
-    println!("Currency Code: {:?}", currency_code.marshal());
+    for _ in 0..NUM_THREADS {
+        let pool = client_pool.clone();
+        let request = request.clone();
+        let tx = tx.clone();
 
-    let mut bitcoin = Bitcoin::new().name("Bitcoin").price(currency).build();
+        spawn!(async move {
+            let response = send_request!(pool, request).await;
+            if let Err(err) = tx.send(response).await {
+                return Err(Error::new(
+                    format!("Failed to send response: {}", err).as_str(),
+                    ErrorCode::Internal,
+                )
+                .with_cause(err));
+            }
 
-    let bitcoin_data = match bitcoin_marshalling(&bitcoin) {
-        Ok(data) => data,
-        Err(err) => {
-            println!("Error: {:?}", err.marshal());
-            return;
+            Ok::<(), Error>(())
+        });
+    }
+
+    drop(tx);
+
+    while let Some(result) = rx.recv().await {
+        match result {
+            Ok(response) => {
+                let json = &response.marshal().unwrap();
+                println!("{:?}", json)
+            }
+            Err(err) => {
+                println!("{:?}", err);
+                return Err(err);
+            }
         }
-    };
+    }
 
-    println!("Bitcoin: {:?}", bitcoin_data);
-
-    bitcoin = match Bitcoin::unmarshal(bitcoin_data.as_str()) {
-        Ok(bitcoin) => bitcoin,
-        Err(err) => {
-            println!("Error: {:?}", err);
-            return;
-        }
-    };
-
-    println!("Bitcoin: {:?}", bitcoin.marshal());
-}
-
-fn bitcoin_marshalling<'a>(bitcoin: &Bitcoin) -> Result<String, Error> {
-    let invalid_error = Error::new("Invalid bitcoin", ErrorCode::Invalid);
-    return Err(invalid_error);
+    Ok(())
 }
