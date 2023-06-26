@@ -1,4 +1,12 @@
-//! # HTTP Client
+//!
+//!  _   _ _   _            ___ _ _            _   
+//! | | | | |_| |_ _ __    / ___| (_) ___ _ __ | |_
+//! | |_| | __| __| '_ \  | |   | | |/ _ \ '_ \| __|
+//! |  _  | |_| |_| |_) | | |___| | |  __/ | | | |_
+//! |_| |_|\__|\__| .__/   \____|_|_|\___|_| |_|\__|
+//!               |_|                               
+//!
+//! # Client
 //!
 //! The `HttpClient` module provides a flexible and easy-to-use HTTP client for making HTTP requests and handling responses.
 //!
@@ -47,7 +55,7 @@
 //! }
 //! ```
 //!
-//! ## Client Pooling
+//! # Client Pooling
 //!
 //! The `HttpClientPool` struct provides a pool of `HttpClient` instances for efficient handling of concurrent requests. The pool allows borrowing and returning clients from the pool, ensuring safe and concurrent access to the clients.
 //!
@@ -156,7 +164,7 @@ impl HttpClient {
     ///
     /// * `request` - An `Arc<HttpRequest>` representing the request to be sent.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// #[tokio::test]
@@ -244,13 +252,11 @@ impl HttpClient {
     }
 }
 
-/// Builder pattern implementation for creating an `HttpClient`.
 pub struct HttpClientBuilder {
     timeout: Option<Duration>,
 }
 
 impl HttpClientBuilder {
-    /// Creates a new instance of `HttpClientBuilder`.
     pub fn new() -> Self {
         Self { timeout: None }
     }
@@ -261,7 +267,7 @@ impl HttpClientBuilder {
     ///
     /// * `timeout` - The duration after which the client request will time out.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use crate::utils::adapters::http_client::HttpClientBuilder;
@@ -269,6 +275,8 @@ impl HttpClientBuilder {
     ///
     /// let builder = HttpClientBuilder::new().timeout(Duration::from_secs(10));
     /// ```
+    ///
+    ///
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
         self
@@ -280,7 +288,7 @@ impl HttpClientBuilder {
     ///
     /// * `index` - The index used to identify the client within a client pool.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use crate::utils::adapters::http_client::HttpClientBuilder;
@@ -288,6 +296,7 @@ impl HttpClientBuilder {
     /// let builder = HttpClientBuilder::new();
     /// let client = builder.build(0);
     /// ```
+    ///
     pub fn build(self, index: usize) -> HttpClient {
         let mut client_builder = Client::builder();
         match self.timeout {
@@ -323,13 +332,15 @@ impl HttpClientPool {
     ///
     /// * `num_clients` - The number of clients to create in the pool.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use crate::utils::adapters::http_client::HttpClientPool;
     ///
     /// let pool = HttpClientPool::with_capacity(5);
     /// ```
+    ///
+    ///
     pub fn with_capacity(num_clients: usize) -> Self {
         let mut clients = Vec::with_capacity(num_clients);
 
@@ -344,7 +355,7 @@ impl HttpClientPool {
 
     /// Borrows an `HttpClient` from the pool.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use crate::utils::adapters::http_client::HttpClientPool;
@@ -357,6 +368,8 @@ impl HttpClientPool {
     ///
     /// pool.return_client(client);
     /// ```
+    ///
+    ///
     pub fn borrow_client<'a>(&'a mut self) -> Result<Arc<HttpClient>, Error> {
         let mut borrowed_set = self.borrowed.try_write().map_err(|err| {
             let poisoned_err = err.to_string();
@@ -396,7 +409,7 @@ impl HttpClientPool {
     ///
     /// * `client` - The borrowed `HttpClient` to return to the pool.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use crate::utils::adapters::http_client::{HttpClient, HttpClientPool};
@@ -410,6 +423,8 @@ impl HttpClientPool {
     ///
     /// pool.return_client(client);
     /// ```
+    ///
+    ///
     pub fn return_client(&mut self, client: Arc<HttpClient>) {
         let mut borrowed = match self.borrowed.try_write() {
             Ok(borrowed) => borrowed,
