@@ -1,5 +1,3 @@
-use macros::*;
-
 pub mod code;
 pub mod name;
 pub mod symbol;
@@ -9,7 +7,7 @@ use name::CurrencyName;
 use symbol::CurrencySymbol;
 
 #[derive(Debug, Clone, PartialEq)]
-#[json_parse]
+#[macros::json]
 pub struct Currency {
     code: CurrencyCode,
     name: CurrencyName,

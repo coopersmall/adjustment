@@ -1,9 +1,7 @@
-use macros::*;
-
 use super::currency::Currency;
 
-#[json_parse]
 #[derive(Debug, Clone, PartialEq)]
+#[macros::json]
 pub struct Bitcoin<'a> {
     name: &'a str,
     price: Currency,
