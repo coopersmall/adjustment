@@ -21,3 +21,7 @@ features = [
     "fast-rng",          
     "macro-diagnostics",
 ]
+
+[dependencies.time]
+version = "0.3"
+features = ["macros", "formatting", "parsing"]

@@ -141,6 +141,10 @@ pub enum ErrorCode {
     JsonParse,
     /// There was an error serializing JSON.
     JsonSerialize,
+    /// There was an error formatting a value.
+    Formatting,
+    /// There was an error parsing a value.
+    Parse,
     /// The operation timed out.
     Timeout,
     /// An unknown error occurred.
@@ -160,6 +164,8 @@ impl Display for ErrorCode {
             ErrorCode::Conflict => write!(f, "conflict"),
             ErrorCode::JsonParse => write!(f, "json_parse"),
             ErrorCode::JsonSerialize => write!(f, "json_serialize"),
+            ErrorCode::Formatting => write!(f, "formatting"),
+            ErrorCode::Parse => write!(f, "parse"),
             ErrorCode::Timeout => write!(f, "timeout"),
             ErrorCode::Unknown => write!(f, "unknown"),
         }
