@@ -7,8 +7,17 @@ edition = "2021"
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
+
 thiserror = "1.0.0"
 reqwest = "0.11.0"
 rand = "0.8.4"
 regex = "1.5.4"
 percent-encoding = "2.3.0"
+
+[dependencies.uuid]
+version = "1.4.0"
+features = [
+    "v4",                
+    "fast-rng",          
+    "macro-diagnostics",
+]
