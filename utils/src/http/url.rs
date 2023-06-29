@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::{Error, ErrorCode};
 
+use super::HttpParams;
+
 const BASE_URL_PATTERN: &str = r"^(https?://)?(www\.)?([\w-]+\.[a-z]+)(/)?$";
 const URL_PATTERN: &str = r"^(https?://)?(www\.)?([\w-]+\.[a-z]+)(/.*)?(\?.*)?$";
 
@@ -11,7 +13,7 @@ const URL_PATTERN: &str = r"^(https?://)?(www\.)?([\w-]+\.[a-z]+)(/.*)?(\?.*)?$"
 pub struct Url {
     base_url: Box<str>,
     path: Option<Box<str>>,
-    params: Option<Vec<(Box<str>, Box<str>)>>,
+    params: Option<HttpParams>,
 }
 
 impl Url {
@@ -144,7 +146,7 @@ impl Url {
     ///     .unwrap()
     ///     .set_params(params);
     /// ```
-    pub fn set_params(mut self, params: Vec<(Box<str>, Box<str>)>) -> Self {
+    pub fn set_params(mut self, params: HttpParams) -> Self {
         self.params = Some(params);
         self
     }
