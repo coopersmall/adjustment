@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use super::{HttpCookies, HttpHeaders};
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HttpMethod {
     GET,
@@ -17,7 +19,8 @@ pub struct HttpRequest {
     pub method: HttpMethod,
     pub url: Box<str>,
     pub agent: Box<str>,
-    pub headers: Option<HashMap<Box<str>, Box<str>>>,
+    pub headers: Option<HttpHeaders>,
+    pub cookies: Option<HttpCookies>,
     pub body: Option<Box<str>>,
 }
 
@@ -46,6 +49,7 @@ pub struct HttpRequestBuilder {
     url: Box<str>,
     agent: Box<str>,
     headers: Option<HashMap<Box<str>, Box<str>>>,
+    cookies: Option<HashMap<Box<str>, Box<str>>>,
     body: Option<Box<str>>,
 }
 
@@ -56,6 +60,7 @@ impl HttpRequestBuilder {
             url: url.into(),
             agent: "".into(),
             headers: None,
+            cookies: None,
             body: None,
         }
     }
@@ -156,6 +161,53 @@ impl HttpRequestBuilder {
         self.headers = Some(headers);
     }
 
+    /// Sets the cookies for the HTTP request.
+    ///
+    /// # Arguments
+    /// * `cookies` - A HashMap of cookies, where the keys and values are strings.
+    ///
+    /// # Examples
+    /// ```
+    /// use crate::utils::http::{HttpRequest, HttpMethod};
+    /// use std::collections::HashMap;
+    ///
+    /// let mut cookies = HashMap::new();
+    /// cookies.insert("my_cookie", "my_value");
+    /// cookies.insert("my_other_cookie", "my_other_value");
+    /// let request = HttpRequest::new("https://example.com", HttpMethod::GET)
+    ///    .cookies(cookies);
+    /// ```
+    pub fn cookies(mut self, cookies: HashMap<&str, &str>) -> Self {
+        self.cookies = Some(
+            cookies
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+        );
+        self
+    }
+
+    /// Adds a cookie to the HTTP request.
+    ///
+    /// # Arguments
+    /// * `key` - The cookie key.
+    /// * `value` - The cookie value.
+    ///
+    /// # Examples
+    /// ```
+    /// use crate::utils::http::{HttpRequest, HttpMethod};
+    /// let request = HttpRequest::new("https://example.com", HttpMethod::GET)
+    ///   .add_cookie("my_cookie", "my_value");
+    ///   ```
+    pub fn add_cookie(&mut self, key: &str, value: &str) {
+        if self.cookies.is_none() {
+            self.cookies = Some(Self::get_default_cookies());
+        }
+        let mut cookies = self.cookies.take().unwrap();
+        cookies.insert(key.into(), value.into());
+        self.cookies = Some(cookies);
+    }
+
     /// Sets the body for the HTTP request.
     ///
     /// # Arguments
@@ -196,6 +248,7 @@ impl HttpRequestBuilder {
             url: self.url,
             agent: self.agent,
             headers: Some(headers),
+            cookies: self.cookies,
             body: self.body,
         }
     }
@@ -205,5 +258,10 @@ impl HttpRequestBuilder {
         headers.insert("User-Agent".into(), DEFAULT_USER_AGENT.into());
         headers.insert("Content-Type".into(), DEFAULT_CONTENT_TYPE.into());
         headers
+    }
+
+    fn get_default_cookies() -> HashMap<Box<str>, Box<str>> {
+        let cookies = HashMap::new();
+        cookies
     }
 }
