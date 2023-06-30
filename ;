@@ -776,37 +776,62 @@ impl Weekday {
     }
 }
 
-pub enum TimeZone {
-    UTC,
-    Other(DateTime),
+pub enum Meridiem {
+    AM,
+    PM,
 }
 
-impl TimeZone {
-    /// Returns the timezone as a str
-    /// UTC, Local, or a Timezone offset
+impl Meridiem {
+    pub fn from_str(meridiem: &str) -> Result<Self, Error> {
+        match meridiem {
+            "AM" => Ok(Self::AM),
+            "PM" => Ok(Self::PM),
+            _ => Err(Error::new("Invalid meridiem provided", ErrorCode::Invalid)),
+        }
+    }
+
+    pub fn as_str<'a>(&self) -> &'a str {
+        match self {
+            Self::AM => "AM",
+            Self::PM => "PM",
+        }
+    }
+
+    pub fn is_am(&self) -> bool {
+        match self {
+            Self::AM => true,
+            Self::PM => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Offset {
+    UTC,
+    Other(i32),
+}
+
+impl Offset {
+    /// Returns the name of the timezone
     ///
     /// # Examples
     /// ```
     /// use utils::time::{DateTime, Date, Time};
-    /// use utils::time::TimeZone;
+    /// use utils::time::Offset;
     ///
-    /// let timezone = TimeZone::UTC.as_offset_str();
+    /// let timezone = Offset::UTC.as_str();
     /// assert_eq!(timezone.as_ref(), "+00:00");
     ///
-    /// let date = Date::new(2020, 1, 1).unwrap();
-    /// let time = Time::new(0, 0, 0, 0, 3600).unwrap();
     ///
-    /// let date_time = DateTime::new(date, time).unwrap();
-    ///
-    /// let timezone = TimeZone::Other(date_time).as_offset_str();
+    /// let offset = 3600;
+    /// let timezone = Offset::Other(offset).as_str();
     /// assert_eq!(timezone.as_ref(), "+01:00");
     /// ```
-    pub fn as_offset_str(&self) -> Box<str> {
+    pub fn as_str(&self) -> Box<str> {
         match self {
-            TimeZone::UTC => "+00:00".into(),
-            TimeZone::Other(date_time) => {
-                let offset = date_time.offset();
-                match FixedOffset::east_opt(offset) {
+            Offset::UTC => "+00:00".into(),
+            Offset::Other(offset) => {
+                match FixedOffset::east_opt(*offset) {
                     Some(offset) => return offset.to_string().into(),
                     None => todo!(),
                 };
@@ -814,28 +839,30 @@ impl TimeZone {
         }
     }
 
-    /// Returns the name of the timezone
-    ///
-    /// # Examples
-    /// ```
-    /// use utils::time::{DateTime, Date, Time};
-    /// use utils::time::TimeZone;
-    ///
-    /// let timezone = TimeZone::UTC.as_str();
-    /// assert_eq!(timezone.as_ref(), "UTC");
-    ///
-    /// let date = Date::new(2020, 1, 1).unwrap();
-    /// let time = Time::new(0, 0, 0, 0, 3600).unwrap();
-    ///
-    /// let date_time = DateTime::new(date, time).unwrap();
-    ///
-    /// let timezone = TimeZone::Other(date_time).as_str();
-    /// assert_eq!(timezone.as_ref(), "America/Chicago");
-    /// ```
-    pub fn as_str(&self) -> Box<str> {
+    pub fn from_i32(offset: i32) -> Result<Self, Error> {
+        if offset < -43200 || offset > 50400 {
+            return Err(Error::new("Invalid offset provided", ErrorCode::Invalid));
+        }
+
+        Ok(Self::Other(offset))
+    }
+
+    pub fn is_valid(&self) -> bool {
         match self {
-            TimeZone::UTC => "UTC".into(),
-            TimeZone::Other(date_time) => "Other".into(),
+            Offset::UTC => true,
+            Offset::Other(offset) => {
+                if *offset < -43200 || *offset > 50400 {
+                    false
+                } else {
+                    true
+                }
+            }
         }
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Timezone {
+    UTC,
+    Other(Box<str>),
 }
