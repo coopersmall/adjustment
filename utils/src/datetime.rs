@@ -1,11 +1,16 @@
+use ::time::OffsetDateTime;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::{Error, ErrorCode};
 
 pub mod date;
+pub mod helpers;
+pub mod primatives;
 pub mod time;
+pub mod timer;
 
-pub use self::date::{Date, Month, Weekday};
+pub use self::date::Date;
+use self::primatives::{Day, Hour, Millisecond, Minute, Month, Second, Weekday, Year};
 pub use self::time::{Offset, Time};
 
 pub enum DateTimeFormat {
@@ -15,7 +20,7 @@ pub enum DateTimeFormat {
     PRETTY,
 }
 
-pub(self) type DateFormatResult = Result<Box<str>, Error>;
+pub type DateFormatResult = Result<Box<str>, Error>;
 
 pub trait Format {
     fn format(&self, format: &DateTimeFormat) -> DateFormatResult;
@@ -36,28 +41,50 @@ pub struct DateTime {
 }
 
 impl DateTime {
-    pub fn new(date: Date, time: Time) -> Result<Self, Error> {
-        if !DateTime::is_valid(&date, &time) {
-            return Err(Error::new("Invalid date time", ErrorCode::Invalid));
-        }
+    pub fn new(
+        year: i32,
+        month: u8,
+        day: u8,
+        hour: u8,
+        minute: u8,
+        second: u8,
+        milliseconds: Option<u16>,
+        offset: Option<i32>,
+    ) -> Result<Self, Error> {
+        let date = Date::new(year, month, day)?;
+        let time = Time::new(hour, minute, second, milliseconds, offset)?;
 
         let date_time = Self { date, time };
 
         Ok(date_time)
     }
 
-    pub fn now() -> Result<Self, Error> {
-        let date = Date::now();
-        let time = Time::now();
+    pub fn now() -> Self {
+        let now = OffsetDateTime::now_utc();
+        let date = Date::from_offset_time(&now);
+        let time = Time::from_offset_time(&now);
 
-        DateTime::new(date, time)
+        Self { date, time }
     }
 
     pub fn local() -> Result<Self, Error> {
-        let date = Date::local()?;
-        let time = Time::local()?;
+        let now = OffsetDateTime::now_local();
+        let now = match now {
+            Ok(now) => now,
+            Err(error) => {
+                return Err(
+                    Error::new("Failed to get local time", ErrorCode::DateTimeCreation)
+                        .with_cause(error),
+                )
+            }
+        };
 
-        DateTime::new(date, time)
+        let date = Date::from_offset_time(&now);
+        let time = Time::from_offset_time(&now);
+
+        let date_time = Self { date, time };
+
+        Ok(date_time)
     }
 
     pub fn date(&self) -> &Date {
@@ -68,47 +95,54 @@ impl DateTime {
         &self.time
     }
 
-    pub fn year(&self) -> i32 {
+    pub fn year(&self) -> &Year {
         self.date.year()
     }
 
-    pub fn month(&self) -> u8 {
+    pub fn month(&self) -> &Month {
         self.date.month()
     }
 
-    pub fn day(&self) -> u8 {
+    pub fn day(&self) -> &Day {
         self.date.day()
     }
 
-    pub fn hour(&self) -> u8 {
+    pub fn weekday(&self) -> &Weekday {
+        self.date.weekday()
+    }
+
+    pub fn hour(&self) -> &Hour {
         self.time.hour()
     }
 
-    pub fn minute(&self) -> u8 {
+    pub fn minute(&self) -> &Minute {
         self.time.minute()
     }
 
-    pub fn second(&self) -> u8 {
-        self.time.seconds()
+    pub fn second(&self) -> &Second {
+        self.time.second()
     }
 
-    pub fn millisecond(&self) -> u16 {
-        self.time.milliseconds()
+    pub fn millisecond(&self) -> Option<&Millisecond> {
+        self.time.millisecond()
     }
 
-    pub fn offset(&self) -> i32 {
+    pub fn offset(&self) -> Option<&Offset> {
         self.time.offset()
     }
 
-    pub fn is_valid(date: &Date, time: &Time) -> bool {
-        Date::is_valid(date.year(), date.month(), date.day())
-            && Time::is_valid(
-                time.hour(),
-                time.minute(),
-                time.seconds(),
-                time.milliseconds(),
-                time.offset(),
-            )
+    pub fn is_valid(
+        year: i32,
+        month: u8,
+        day: u8,
+        hour: u8,
+        minute: u8,
+        second: u8,
+        milliseconds: u16,
+        offset: i32,
+    ) -> bool {
+        Date::is_valid(year, month, day)
+            && Time::is_valid(hour, minute, second, milliseconds, offset)
     }
 }
 

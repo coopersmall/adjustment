@@ -2,15 +2,16 @@ use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
+use super::primatives::*;
 use super::{DateFormatResult, DateTimeFormat, Format, FormatLocal, FormatNow};
 use crate::errors::{Error, ErrorCode};
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, Ord, Serialize, Deserialize)]
 pub struct Date {
-    year: i32,
+    year: Year,
     month: Month,
-    day: u8,
+    day: Day,
     weekday: Weekday,
 }
 
@@ -20,20 +21,10 @@ impl Date {
             return Err(Error::new("Invalid date provided", ErrorCode::Invalid));
         }
 
-        let month = match Month::from_u8(month) {
-            Ok(month) => month,
-            Err(err) => {
-                return Err(Error::new("Invalid month provided", ErrorCode::Invalid).with_cause(err))
-            }
-        };
-
-        let weekday = Date::get_weekday(year, month.as_u8(), day);
-        let weekday = match Weekday::from_u8(weekday) {
-            Ok(weekday) => weekday,
-            Err(err) => {
-                return Err(Error::new("Failed to get weekday", ErrorCode::Invalid).with_cause(err))
-            }
-        };
+        let weekday = Weekday::from_values(year, month, day)?;
+        let year = Year::from_i32(year)?;
+        let month = Month::from_u8(month)?;
+        let day = Day::from_u8(day)?;
 
         let date = Self {
             year,
@@ -49,10 +40,11 @@ impl Date {
         let date = OffsetDateTime::now_utc();
 
         let (month, day, year) = (date.month() as u8, date.day(), date.year());
-        let month = Month::dangerously_from_u8(month);
 
-        let weekday = Date::get_weekday(year, month.as_u8(), day);
-        let weekday = Weekday::dangerously_from_u8(weekday);
+        let weekday = Weekday::dangerously_from_values(year, month, day);
+        let month = Month::dangerously_from_u8(month);
+        let year = Year::dangerously_from_i32(year);
+        let day = Day::dangerously_from_u8(day);
 
         let date = Self {
             year,
@@ -75,10 +67,11 @@ impl Date {
         };
 
         let (month, day, year) = (date.month() as u8, date.day(), date.year());
-        let month = Month::dangerously_from_u8(month);
 
-        let weekday = Date::get_weekday(year, month.as_u8(), day);
-        let weekday = Weekday::dangerously_from_u8(weekday);
+        let weekday = Weekday::dangerously_from_values(year, month, day);
+        let month = Month::dangerously_from_u8(month);
+        let year = Year::dangerously_from_i32(year);
+        let day = Day::dangerously_from_u8(day);
 
         let date = Self {
             year,
@@ -90,20 +83,42 @@ impl Date {
         Ok(date)
     }
 
-    pub fn year(&self) -> i32 {
-        self.year
+    pub(super) fn from_offset_time(offset_time: &OffsetDateTime) -> Self {
+        let (month, day, year) = (
+            offset_time.month() as u8,
+            offset_time.day(),
+            offset_time.year(),
+        );
+
+        let weekday = Weekday::dangerously_from_values(year, month, day);
+        let month = Month::dangerously_from_u8(month);
+        let year = Year::dangerously_from_i32(year);
+        let day = Day::dangerously_from_u8(day);
+
+        let date = Self {
+            year,
+            month,
+            day,
+            weekday,
+        };
+
+        date
     }
 
-    pub fn month(&self) -> u8 {
-        self.month.as_u8()
+    pub fn year(&self) -> &Year {
+        &self.year
     }
 
-    pub fn day(&self) -> u8 {
-        self.day
+    pub fn month(&self) -> &Month {
+        &self.month
     }
 
-    pub fn weekday(&self) -> u8 {
-        self.weekday.as_u8()
+    pub fn day(&self) -> &Day {
+        &self.day
+    }
+
+    pub fn weekday(&self) -> &Weekday {
+        &self.weekday
     }
 
     /// Parses a date from a string.
@@ -142,6 +157,75 @@ impl Date {
         Err(Error::new("Invalid date format", ErrorCode::Invalid))
     }
 
+    pub fn unix(&self) -> u32 {
+        let mut unix = 0;
+
+        unix += self.year().unix();
+        unix += self.month().unix(self.year());
+        unix += self.day().unix(self.year(), self.month());
+
+        unix
+    }
+
+    pub fn primatives(&self) -> (i32, u8, u8) {
+        (
+            self.year().as_i32(),
+            self.month().as_u8(),
+            self.day().as_u8(),
+        )
+    }
+
+    pub fn is_same_date(&self, date2: &Date) -> bool {
+        self.day() == date2.day() && self.month() == date2.month() && self.year() == date2.year()
+    }
+
+    pub fn is_today(&self) -> bool {
+        let today = Date::now();
+        self.is_same_date(&today)
+    }
+
+    pub fn is_yesterday(&self) -> bool {
+        let yesterday = Date::now().sub_days(1);
+        self.is_same_date(&yesterday)
+    }
+
+    pub fn is_tomorrow(&self) -> bool {
+        let tomorrow = Date::now().add_days(1);
+        self.is_same_date(&tomorrow)
+    }
+
+    pub fn is_weekday(&self) -> bool {
+        self.weekday() != &Weekday::Saturday && self.weekday() != &Weekday::Sunday
+    }
+
+    pub fn is_past_date(&self, date: &Date) -> bool {
+        date < &self
+    }
+
+    pub fn is_future_date(&self, date: &Date) -> bool {
+        date > &self
+    }
+
+    pub fn is_last_day_of_month(&self) -> bool {
+        self.month().is_last_day(&self.year(), &self.day())
+    }
+
+    pub fn is_last_day_of_year(&self) -> bool {
+        self.month() == &Month::December && self.day() == &31
+    }
+
+    pub fn is_first_day_of_month(&self) -> bool {
+        self.day() == &1
+    }
+
+    pub fn is_first_day_of_year(&self) -> bool {
+        self.month() == &Month::January && self.day() == &1
+    }
+
+    pub fn is_leap_year_day(&self) -> bool {
+        self.month() == &Month::February && self.day() == &29
+    }
+
     pub fn is_valid(year: i32, month: u8, day: u8) -> bool {
         Self::is_valid_month(month)
             && Self::is_valid_day(month, day, year)
@@ -162,11 +246,341 @@ impl Date {
             Err(_) => return false,
         };
 
-        month.is_valid_day_in_month(day, year)
+        month.is_valid_day(&day, &year)
     }
 
     pub fn is_valid_year(year: i32) -> bool {
         year >= 0
+    }
+
+    pub fn days_between_count(&self, date2: &Date) -> u32 {
+        let mut days = 0;
+
+        let mut date = self;
+
+        if date > date2 {
+            while date > date2 {
+                days += 1;
+                date.sub_days(1);
+            }
+        }
+
+        if date < date2 {
+            while date < date2 {
+                days += 1;
+                date.add_days(1);
+            }
+        }
+
+        days
+    }
+
+    pub fn weekdays_before_weekday(&self, weekday: &Weekday) -> u8 {
+        let mut days = 0;
+
+        let mut date = self;
+        while date.weekday() != weekday {
+            if date.is_weekday() {
+                days += 1;
+            }
+            date.add_days(1);
+        }
+
+        days
+    }
+
+    pub fn weekdays_after_weekday(&self, weekday: &Weekday) -> u8 {
+        if self.is_weekday() {
+            return 0;
+        }
+
+        let mut days = 0;
+
+        let mut date = self;
+        while date.weekday() != weekday {
+            if date.is_weekday() {
+                days += 1;
+            }
+            date.sub_days(1);
+        }
+
+        days
+    }
+
+    pub fn weekdays_until_next_weekday(&self) -> u8 {
+        let mut days = 0;
+
+        let mut date = self;
+        while date.is_weekday() {
+            days += 1;
+            date.add_days(1);
+        }
+
+        days
+    }
+}
+
+impl Date {
+    pub fn add_days(&mut self, days: u8) -> Self {
+        for _ in 0..days {
+            if self.is_last_day_of_month() {
+                self.month.next();
+            }
+
+            if self.day() > &self.month().last_day(self.year()) {
+                self.day = Day::first();
+            } else {
+                self.day.next();
+            }
+
+            if self.is_first_day_of_year() {
+                self.year.next();
+            }
+        }
+
+        *self
+    }
+
+    pub fn sub_days(&mut self, days: u8) -> Self {
+        for _ in 0..days {
+            if self.is_first_day_of_month() {
+                self.month.next_back();
+            }
+
+            if self.day() == &1 {
+                self.day = self.month().last_day(self.year());
+            } else {
+                self.day.next_back();
+            }
+
+            if self.is_last_day_of_year() {
+                self.year.next_back();
+            }
+        }
+
+        *self
+    }
+
+    pub fn add_weeks(&mut self, weeks: u8) -> Self {
+        self.add_days(weeks * 7)
+    }
+
+    pub fn sub_weeks(&mut self, weeks: u8) -> Self {
+        self.sub_days(weeks * 7)
+    }
+
+    pub fn add_months(&mut self, months: u8) -> Self {
+        let is_last_day_of_month = self.is_last_day_of_month();
+
+        for _ in 0..months {
+            if self.month() == &Month::December {
+                self.year.next();
+            }
+
+            let last_day = self.month().last_day(self.year());
+
+            if is_last_day_of_month {
+                self.day = last_day;
+            } else if self.day() > &last_day {
+                self.day = last_day;
+            }
+
+            self.month.next();
+        }
+
+        *self
+    }
+
+    pub fn sub_months(&mut self, months: u8) -> Self {
+        let is_last_day_of_month = self.is_last_day_of_month();
+
+        for _ in 0..months {
+            if self.month() == &Month::January {
+                self.year.next_back();
+            }
+
+            let last_day = self.month().last_day(self.year());
+
+            if is_last_day_of_month {
+                self.day = last_day;
+            } else if self.day() > &last_day {
+                self.day = last_day;
+            }
+
+            self.month.next_back();
+        }
+
+        *self
+    }
+
+    pub fn add_years(&mut self, years: u32) -> Self {
+        let is_leap_year_day = self.is_leap_year_day();
+
+        for _ in 0..years {
+            let is_leap_year = self.year().is_leap_year();
+
+            if is_leap_year_day && is_leap_year {
+                self.day = Day::dangerously_from_u8(29);
+            } else if is_leap_year_day && !is_leap_year {
+                self.day = Day::dangerously_from_u8(28);
+            }
+
+            self.year.next();
+        }
+
+        *self
+    }
+
+    pub fn sub_years(&mut self, years: u32) -> Self {
+        let is_leap_year_day = self.is_leap_year_day();
+
+        for _ in 0..years {
+            let is_leap_year = self.year().is_leap_year();
+
+            if is_leap_year_day && is_leap_year {
+                self.day = Day::dangerously_from_u8(29);
+            } else if is_leap_year_day && !is_leap_year {
+                self.day = Day::dangerously_from_u8(28);
+            }
+
+            self.year.next_back();
+        }
+
+        *self
+    }
+
+    pub fn next_day(&self) -> Date {
+        self.add_days(1)
+    }
+
+    pub fn prev_day(&self) -> Date {
+        self.sub_days(1)
+    }
+
+    pub fn next_week(&self) -> Date {
+        self.add_weeks(1)
+    }
+
+    pub fn prev_week(&self) -> Date {
+        self.sub_weeks(1)
+    }
+
+    pub fn next_month(&self) -> Date {
+        self.add_months(1)
+    }
+
+    pub fn prev_month(&self) -> Date {
+        self.sub_months(1)
+    }
+
+    pub fn next_year(&self) -> Date {
+        self.add_years(1)
+    }
+
+    pub fn prev_year(&self) -> Date {
+        self.sub_years(1)
+    }
+
+    pub fn next_days(&self, days: u8) -> Box<[&Date]> {
+        let mut dates = Vec::with_capacity(days as usize);
+        let mut date = self;
+
+        for _ in 0..days {
+            date = &date.next_day();
+            dates.push(date);
+        }
+
+        dates.into_boxed_slice()
+    }
+
+    pub fn prev_days(&self, days: u8) -> Box<[&Date]> {
+        let mut dates = Vec::with_capacity(days as usize);
+        let mut date = self;
+
+        for _ in 0..days {
+            date = &date.prev_day();
+            dates.push(date);
+        }
+
+        dates.into_boxed_slice()
+    }
+
+    pub fn next_weekday(&self) -> Date {
+        let mut date = self.next_day();
+
+        while date.weekday() == &Weekday::Saturday || date.weekday() == &Weekday::Sunday {
+            date = date.next_day();
+        }
+
+        date
+    }
+
+    pub fn prev_weekday(&self) -> Date {
+        let mut date = self.prev_day();
+
+        while date.weekday() == &Weekday::Saturday || date.weekday() == &Weekday::Sunday {
+            date = date.prev_day();
+        }
+
+        date
+    }
+
+    pub fn days_between(&self, other: &Date) -> Box<[Date]> {
+        let mut dates = Vec::new();
+        let mut date = self.clone();
+
+        if date > *other {
+            while date != *other {
+                dates.push(date);
+                date = date.prev_day();
+            }
+        }
+
+        if date < *other {
+            while date != *other {
+                dates.push(date);
+                date = date.next_day();
+            }
+        }
+
+        dates.into_boxed_slice()
+    }
+}
+
+impl Date {}
+
+impl Date {}
+
+impl PartialEq<Date> for Date {
+    fn eq(&self, other: &Date) -> bool {
+        self.year == other.year
+            && self.month == other.month
+            && self.day == other.day
+            && self.weekday == other.weekday
+    }
+}
+
+impl PartialOrd<Date> for Date {
+    fn partial_cmp(&self, other: &Date) -> Option<std::cmp::Ordering> {
+        if self.year > other.year {
+            return Some(std::cmp::Ordering::Greater);
+        } else if self.year < other.year {
+            return Some(std::cmp::Ordering::Less);
+        }
+
+        if self.month > other.month {
+            return Some(std::cmp::Ordering::Greater);
+        } else if self.month < other.month {
+            return Some(std::cmp::Ordering::Less);
+        }
+
+        if self.day > other.day {
+            return Some(std::cmp::Ordering::Greater);
+        } else if self.day < other.day {
+            return Some(std::cmp::Ordering::Less);
+        }
+
+        Some(std::cmp::Ordering::Equal)
     }
 }
 
@@ -196,6 +610,32 @@ impl FormatLocal for Date {
     }
 }
 
+impl Iterator for Date {
+    type Item = Date;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let date = self.next_day();
+        self.year = date.year;
+        self.month = date.month;
+        self.day = date.day;
+        self.weekday = date.weekday;
+
+        Some(date)
+    }
+}
+
+impl DoubleEndedIterator for Date {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let date = self.prev_day();
+        self.year = date.year;
+        self.month = date.month;
+        self.day = date.day;
+        self.weekday = date.weekday;
+
+        Some(date)
+    }
+}
+
 impl Date {
     fn shared_format(&self, format: &DateTimeFormat) -> Box<str> {
         match format {
@@ -209,7 +649,7 @@ impl Date {
                     "{}, {} {} {:04}",
                     self.weekday.as_short(),
                     self.month.as_long(),
-                    pretty_format_day(self.day),
+                    self.day.pretty_format(),
                     self.year
                 )
                 .into();
@@ -231,355 +671,5 @@ impl Date {
                 .into();
             }
         }
-    }
-
-    fn get_weekday(year: i32, month: u8, day: u8) -> u8 {
-        let mut month = month as i32;
-        let mut year = year;
-
-        if month < 3 {
-            month += 12;
-            year -= 1;
-        }
-
-        let century = year / 100;
-        let year_of_century = year % 100;
-
-        let weekday = (day as i32
-            + (((month + 1) * 26) / 10)
-            + year_of_century
-            + (year_of_century / 4)
-            + (century / 4)
-            - (2 * century))
-            % 7;
-
-        ((weekday + 7) % 7) as u8
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum Month {
-    January = 1,
-    February = 2,
-    March = 3,
-    April = 4,
-    May = 5,
-    June = 6,
-    July = 7,
-    August = 8,
-    September = 9,
-    October = 10,
-    November = 11,
-    December = 12,
-}
-
-impl Month {
-    fn from_u8(month: u8) -> Result<Self, Error> {
-        match month {
-            1 => Ok(Self::January),
-            2 => Ok(Self::February),
-            3 => Ok(Self::March),
-            4 => Ok(Self::April),
-            5 => Ok(Self::May),
-            6 => Ok(Self::June),
-            7 => Ok(Self::July),
-            8 => Ok(Self::August),
-            9 => Ok(Self::September),
-            10 => Ok(Self::October),
-            11 => Ok(Self::November),
-            12 => Ok(Self::December),
-            _ => Err(Error::new("Invalid month provided", ErrorCode::Invalid)),
-        }
-    }
-
-    pub fn as_long<'a>(&self) -> &'a str {
-        match self {
-            Self::January => "January",
-            Self::February => "February",
-            Self::March => "March",
-            Self::April => "April",
-            Self::May => "May",
-            Self::June => "June",
-            Self::July => "July",
-            Self::August => "August",
-            Self::September => "September",
-            Self::October => "October",
-            Self::November => "November",
-            Self::December => "December",
-        }
-    }
-
-    pub fn as_short<'a>(&self) -> &'a str {
-        match self {
-            Self::January => "Jan",
-            Self::February => "Feb",
-            Self::March => "Mar",
-            Self::April => "Apr",
-            Self::May => "May",
-            Self::June => "Jun",
-            Self::July => "Jul",
-            Self::August => "Aug",
-            Self::September => "Sep",
-            Self::October => "Oct",
-            Self::November => "Nov",
-            Self::December => "Dec",
-        }
-    }
-
-    pub fn as_u8(&self) -> u8 {
-        match self {
-            Self::January => 1,
-            Self::February => 2,
-            Self::March => 3,
-            Self::April => 4,
-            Self::May => 5,
-            Self::June => 6,
-            Self::July => 7,
-            Self::August => 8,
-            Self::September => 9,
-            Self::October => 10,
-            Self::November => 11,
-            Self::December => 12,
-        }
-    }
-
-    pub fn get_days_from_month(month: u8, year: i32) -> Result<u8, Error> {
-        let month = Self::from_u8(month)?;
-
-        Ok(month.valid_days_in_month(year))
-    }
-
-    pub fn is_valid_day_in_month(&self, day: u8, year: i32) -> bool {
-        day <= self.valid_days_in_month(year)
-    }
-
-    pub fn has_31_days(&self) -> bool {
-        match self {
-            Self::January => true,
-            Self::March => true,
-            Self::May => true,
-            Self::July => true,
-            Self::August => true,
-            Self::October => true,
-            Self::December => true,
-            _ => false,
-        }
-    }
-
-    pub fn has_30_days(&self) -> bool {
-        match self {
-            Self::April => true,
-            Self::June => true,
-            Self::September => true,
-            Self::November => true,
-            _ => false,
-        }
-    }
-
-    pub fn has_28_days(&self) -> bool {
-        match self {
-            Self::February => true,
-            _ => false,
-        }
-    }
-}
-
-impl Month {
-    fn dangerously_from_u8(month: u8) -> Self {
-        match month {
-            1 => Self::January,
-            2 => Self::February,
-            3 => Self::March,
-            4 => Self::April,
-            5 => Self::May,
-            6 => Self::June,
-            7 => Self::July,
-            8 => Self::August,
-            9 => Self::September,
-            10 => Self::October,
-            11 => Self::November,
-            12 => Self::December,
-            _ => panic!("Invalid month provided"),
-        }
-    }
-
-    fn valid_days_in_month(&self, year: i32) -> u8 {
-        match self {
-            Self::January => 31,
-            Self::February => {
-                if year % 4 == 0 {
-                    29
-                } else {
-                    28
-                }
-            }
-            Self::March => 31,
-            Self::April => 30,
-            Self::May => 31,
-            Self::June => 30,
-            Self::July => 31,
-            Self::August => 31,
-            Self::September => 30,
-            Self::October => 31,
-            Self::November => 30,
-            Self::December => 31,
-        }
-    }
-}
-
-impl From<Month> for u8 {
-    fn from(month: Month) -> Self {
-        match month {
-            Month::January => 1,
-            Month::February => 2,
-            Month::March => 3,
-            Month::April => 4,
-            Month::May => 5,
-            Month::June => 6,
-            Month::July => 7,
-            Month::August => 8,
-            Month::September => 9,
-            Month::October => 10,
-            Month::November => 11,
-            Month::December => 12,
-        }
-    }
-}
-
-impl Display for Month {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_long())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum Weekday {
-    Sunday = 1,
-    Monday = 2,
-    Tuesday = 3,
-    Wednesday = 4,
-    Thursday = 5,
-    Friday = 6,
-    Saturday = 7,
-}
-
-impl Weekday {
-    pub fn from_u8(day: u8) -> Result<Self, Error> {
-        match day {
-            1 => Ok(Self::Sunday),
-            2 => Ok(Self::Monday),
-            3 => Ok(Self::Tuesday),
-            4 => Ok(Self::Wednesday),
-            5 => Ok(Self::Thursday),
-            6 => Ok(Self::Friday),
-            7 => Ok(Self::Saturday),
-            _ => Err(Error::new("Invalid day provided", ErrorCode::Invalid)),
-        }
-    }
-
-    pub(super) fn dangerously_from_u8(day: u8) -> Self {
-        match day {
-            1 => Self::Sunday,
-            2 => Self::Monday,
-            3 => Self::Tuesday,
-            4 => Self::Wednesday,
-            5 => Self::Thursday,
-            6 => Self::Friday,
-            7 => Self::Saturday,
-            _ => panic!("Invalid day provided"),
-        }
-    }
-
-    pub fn as_long<'a>(&self) -> &'a str {
-        match self {
-            Self::Sunday => "Sunday",
-            Self::Monday => "Monday",
-            Self::Tuesday => "Tuesday",
-            Self::Wednesday => "Wednesday",
-            Self::Thursday => "Thursday",
-            Self::Friday => "Friday",
-            Self::Saturday => "Saturday",
-        }
-    }
-
-    pub fn as_short<'a>(&self) -> &'a str {
-        match self {
-            Self::Sunday => "Sun",
-            Self::Monday => "Mon",
-            Self::Tuesday => "Tue",
-            Self::Wednesday => "Wed",
-            Self::Thursday => "Thu",
-            Self::Friday => "Fri",
-            Self::Saturday => "Sat",
-        }
-    }
-
-    pub fn as_u8(&self) -> u8 {
-        match self {
-            Self::Sunday => 1,
-            Self::Monday => 2,
-            Self::Tuesday => 3,
-            Self::Wednesday => 4,
-            Self::Thursday => 5,
-            Self::Friday => 6,
-            Self::Saturday => 7,
-        }
-    }
-}
-
-impl From<Weekday> for u8 {
-    fn from(day: Weekday) -> Self {
-        match day {
-            Weekday::Sunday => 1,
-            Weekday::Monday => 2,
-            Weekday::Tuesday => 3,
-            Weekday::Wednesday => 4,
-            Weekday::Thursday => 5,
-            Weekday::Friday => 6,
-            Weekday::Saturday => 7,
-        }
-    }
-}
-
-impl Display for Weekday {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_long())
-    }
-}
-
-pub(self) fn pretty_format_day<'a>(day: u8) -> &'a str {
-    match day {
-        1 => "1st",
-        2 => "2nd",
-        3 => "3rd",
-        4 => "4th",
-        5 => "5th",
-        6 => "6th",
-        7 => "7th",
-        8 => "8th",
-        9 => "9th",
-        10 => "10th",
-        11 => "11th",
-        12 => "12th",
-        13 => "13th",
-        14 => "14th",
-        15 => "15th",
-        16 => "16th",
-        17 => "17th",
-        18 => "18th",
-        19 => "19th",
-        20 => "20th",
-        21 => "21st",
-        22 => "22nd",
-        23 => "23rd",
-        24 => "24th",
-        25 => "25th",
-        26 => "26th",
-        27 => "27th",
-        28 => "28th",
-        29 => "29th",
-        30 => "30th",
-        31 => "31st",
-        _ => "th",
     }
 }

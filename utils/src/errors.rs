@@ -145,6 +145,8 @@ pub enum ErrorCode {
     Formatting,
     /// There was an error parsing a value.
     Parse,
+    /// The provided date/time is invalid.
+    DateTimeCreation,
     /// The operation timed out.
     Timeout,
     /// An unknown error occurred.
@@ -166,6 +168,7 @@ impl Display for ErrorCode {
             ErrorCode::JsonSerialize => write!(f, "json_serialize"),
             ErrorCode::Formatting => write!(f, "formatting"),
             ErrorCode::Parse => write!(f, "parse"),
+            ErrorCode::DateTimeCreation => write!(f, "date_time_creation"),
             ErrorCode::Timeout => write!(f, "timeout"),
             ErrorCode::Unknown => write!(f, "unknown"),
         }

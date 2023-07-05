@@ -5,16 +5,19 @@ use time::OffsetDateTime;
 
 use std::fmt::{Display, Formatter};
 
-use super::{DateFormatResult, DateTimeFormat, Format, FormatLocal, FormatNow};
+use super::{
+    primatives::{Hour, Millisecond, Minute, Second},
+    DateFormatResult, DateTimeFormat, Format, FormatLocal, FormatNow,
+};
 use crate::errors::{Error, ErrorCode};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Time {
-    hour: u8,
-    minute: u8,
-    seconds: u8,
-    milliseconds: u16,
-    offset: Offset,
+    hour: Hour,
+    minute: Minute,
+    seconds: Second,
+    milliseconds: Option<Millisecond>,
+    offset: Option<Offset>,
 }
 
 impl Time {
@@ -22,27 +25,30 @@ impl Time {
         hour: u8,
         minute: u8,
         seconds: u8,
-        milliseconds: u16,
-        offset: i32,
+        milliseconds: Option<u16>,
+        offset: Option<i32>,
     ) -> Result<Self, Error> {
-        if !Time::is_valid(hour, minute, seconds, milliseconds, offset) {
-            return Err(Error::new("Invalid datetime", ErrorCode::Invalid));
-        }
+        let hour = Hour::from_u8(hour)?;
+        let minute = Minute::from_u8(minute)?;
+        let seconds = Second::from_u8(seconds)?;
 
-        let offset = match Offset::from_seconds(offset) {
-            Ok(offset) => offset,
-            Err(err) => return Err(Error::new(err.to_string().as_str(), ErrorCode::Invalid)),
+        let milliseconds = match milliseconds {
+            Some(milliseconds) => Some(Millisecond::from_u16(milliseconds)?),
+            None => None,
         };
 
-        let datetime = Self {
+        let offset = match offset {
+            Some(offset) => Some(Offset::from_seconds(offset)?),
+            None => None,
+        };
+
+        Ok(Self {
             hour,
             minute,
             seconds,
             milliseconds,
             offset,
-        };
-
-        Ok(datetime)
+        })
     }
 
     /// Returns the current datetime in UTC.
@@ -58,12 +64,12 @@ impl Time {
     pub fn now() -> Self {
         let date = OffsetDateTime::now_utc();
 
-        let hour = date.hour() as u8;
-        let minute = date.minute() as u8;
-        let seconds = date.second() as u8;
-        let milliseconds = date.millisecond() as u16;
+        let hour = Hour::dangerously_from_u8(date.hour() as u8);
+        let minute = Minute::dangerously_from_u8(date.minute() as u8);
+        let seconds = Second::dangerously_from_u8(date.second() as u8);
+        let milliseconds = Some(Millisecond::dangerously_from_u16(date.millisecond() as u16));
         let offset = date.offset().whole_seconds() as i32;
-        let offset = Offset::dangerously_from_seconds(offset);
+        let offset = Some(Offset::dangerously_from_seconds(offset));
 
         Self {
             hour,
@@ -91,33 +97,64 @@ impl Time {
             Err(err) => return Err(Error::new(err.to_string().as_str(), ErrorCode::Invalid)),
         };
 
-        let hour = date.hour() as u8;
-        let minute = date.minute() as u8;
-        let seconds = date.second() as u8;
-        let milliseconds = date.millisecond() as u16;
+        let hour = Hour::dangerously_from_u8(date.hour() as u8);
+        let minute = Minute::dangerously_from_u8(date.minute() as u8);
+        let seconds = Second::dangerously_from_u8(date.second() as u8);
+        let milliseconds = Some(Millisecond::dangerously_from_u16(date.millisecond() as u16));
         let offset = date.offset().whole_seconds() as i32;
+        let offset = Some(Offset::dangerously_from_seconds(offset));
 
-        Time::new(hour, minute, seconds, milliseconds, offset)
+        Ok(Self {
+            hour,
+            minute,
+            seconds,
+            milliseconds,
+            offset,
+        })
     }
 
-    pub fn hour(&self) -> u8 {
-        self.hour
+    pub(super) fn from_offset_time(time: &OffsetDateTime) -> Self {
+        let (hour, minute, seconds, milliseconds, offset) = (
+            time.hour() as u8,
+            time.minute() as u8,
+            time.second() as u8,
+            time.millisecond() as u16,
+            time.offset().whole_seconds() as i32,
+        );
+
+        let hour = Hour::dangerously_from_u8(hour);
+        let minute = Minute::dangerously_from_u8(minute);
+        let seconds = Second::dangerously_from_u8(seconds);
+        let milliseconds = Some(Millisecond::dangerously_from_u16(milliseconds));
+        let offset = Some(Offset::dangerously_from_seconds(offset));
+
+        Self {
+            hour,
+            minute,
+            seconds,
+            milliseconds,
+            offset,
+        }
     }
 
-    pub fn minute(&self) -> u8 {
-        self.minute
+    pub fn hour(&self) -> &Hour {
+        &self.hour
     }
 
-    pub fn seconds(&self) -> u8 {
-        self.seconds
+    pub fn minute(&self) -> &Minute {
+        &self.minute
     }
 
-    pub fn milliseconds(&self) -> u16 {
-        self.milliseconds
+    pub fn second(&self) -> &Second {
+        &self.seconds
     }
 
-    pub fn offset(&self) -> i32 {
-        self.offset.as_seconds()
+    pub fn millisecond(&self) -> Option<&Millisecond> {
+        self.milliseconds.as_ref()
+    }
+
+    pub fn offset(&self) -> Option<&Offset> {
+        self.offset.as_ref()
     }
 
     /// Checks if the datetime is valid.
@@ -173,7 +210,7 @@ impl Time {
 }
 
 impl Time {
-    fn shared_format(&self, format: &DateTimeFormat, offset: Box<str>) -> Box<str> {
+    fn shared_format(&self, format: &DateTimeFormat, offset: Option<Box<str>>) -> Box<str> {
         let mut string = String::new();
 
         match format {
@@ -183,15 +220,21 @@ impl Time {
                 string.push_str(&format!("{:02}", self.minute));
                 string.push(':');
                 string.push_str(&format!("{:02}", self.seconds));
-                string.push('.');
-                string.push_str(&format!("{:03}", self.milliseconds));
-                string.push_str(&offset);
+
+                if let Some(milliseconds) = self.milliseconds {
+                    string.push('.');
+                    string.push_str(&format!("{:03}", milliseconds));
+                }
+
+                if let Some(offset) = offset {
+                    string.push_str(&offset);
+                }
 
                 string.into_boxed_str()
             }
 
             DateTimeFormat::PRETTY => {
-                string.push_str(&format!("{:02}", pretty_format_hour(self.hour)));
+                string.push_str(&format!("{:02}", self.hour.pretty_format()));
                 string.push(':');
                 string.push_str(&format!("{:02}", self.minute));
                 string.push(':');
@@ -199,8 +242,11 @@ impl Time {
                 string.push(' ');
                 let meridiem = if self.hour < 12 { "AM" } else { "PM" };
                 string.push_str(meridiem);
-                string.push_str(" ");
-                string.push_str(&offset);
+
+                if let Some(offset) = offset {
+                    string.push_str(" ");
+                    string.push_str(&offset);
+                }
 
                 string.into_boxed_str()
             }
@@ -214,7 +260,10 @@ impl Time {
                 string.push(':');
                 string.push_str(&format!("{:02}", self.seconds));
                 string.push(' ');
-                string.push_str(&offset);
+
+                if let Some(offset) = offset {
+                    string.push_str(&offset);
+                }
 
                 string.into_boxed_str()
             }
@@ -228,8 +277,14 @@ impl Time {
                 string.push(':');
                 string.push_str(&format!("{:02}", self.seconds));
                 string.push('.');
-                string.push_str(&format!("{:03}", self.milliseconds));
-                string.push_str(&offset);
+
+                if let Some(milliseconds) = self.milliseconds {
+                    string.push_str(&format!("{:03}", milliseconds));
+                }
+
+                if let Some(offset) = offset {
+                    string.push_str(&offset);
+                }
 
                 string.into_boxed_str()
             }
@@ -239,15 +294,25 @@ impl Time {
 
 impl Format for Time {
     fn format(&self, format: &DateTimeFormat) -> DateFormatResult {
-        let offset = self.offset.format(format)?;
-        Ok(Time::shared_format(self, format, offset))
+        match self.offset() {
+            Some(offset) => {
+                let offset = offset.format(format)?;
+                Ok(self.shared_format(format, Some(offset)))
+            }
+
+            None => Ok(self.shared_format(format, None)),
+        }
     }
 }
 
 impl FormatNow for Time {
     fn format_now(format: &DateTimeFormat) -> Box<str> {
         let now = Time::now();
-        let offset = now.offset.format_now(format);
+
+        let offset = match now.offset() {
+            Some(offset) => Some(offset.format_now(format)),
+            None => None,
+        };
 
         now.shared_format(format, offset)
     }
@@ -255,16 +320,24 @@ impl FormatNow for Time {
 
 impl FormatLocal for Time {
     fn format_local(format: &DateTimeFormat) -> DateFormatResult {
-        let local = Time::local()?;
-        let offset = local.offset.format(format)?;
+        let now = Time::now();
 
-        Ok(local.shared_format(format, offset))
+        let offset = match now.offset() {
+            Some(offset) => Some(offset.format(format)?),
+            None => None,
+        };
+
+        Ok(now.shared_format(format, offset))
     }
 }
 
 impl Display for Time {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let offset = Offset::shared_format(&self.offset, &DateTimeFormat::ISO8601);
+        let offset = match self.offset {
+            Some(offset) => Some(Offset::shared_format(&offset, &DateTimeFormat::ISO8601)),
+            None => None,
+        };
+
         write!(
             f,
             "{}",
@@ -338,15 +411,11 @@ impl Offset {
             return None;
         }
 
-        if self.0 == 0 {
-            return Some("UTC".into());
-        }
-
         if let Some(tz) = find_common_tz_from_seconds(self.0) {
             return Some(tz.into());
         }
 
-        let offset = match FixedOffset::west_opt(self.0) {
+        let offset = match FixedOffset::east_opt(self.0) {
             Some(offset) => offset,
             None => return None,
         };
@@ -457,11 +526,4 @@ pub(self) fn find_common_tz_from_seconds(seconds: i32) -> Option<&'static str> {
         -36000 => Some("HST"),
         _ => None,
     }
-}
-
-pub fn pretty_format_hour(hour: u8) -> u8 {
-    if hour > 12 {
-        return hour - 12;
-    }
-    hour
 }
